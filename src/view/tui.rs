@@ -1,7 +1,9 @@
-pub mod tui{
+pub mod tui {
     use cursive::event;
     use cursive::traits::*;
-    use cursive::views::{Button, Dialog, DummyView, EditView, LinearLayout, OnEventView, TextView};
+    use cursive::views::{
+        Button, Dialog, DummyView, EditView, LinearLayout, OnEventView, TextView,
+    };
     use cursive::Cursive;
 
     fn connect_to_server(s: &mut Cursive, command: &str) {
@@ -14,8 +16,8 @@ pub mod tui{
             _ => {
                 s.add_layer(
                     Dialog::text(format!("Command {} not recognized", command))
-                    .button("[q]uit", |s| s.quit()),
-                    );
+                        .button("[q]uit", |s| s.quit()),
+                );
             }
         }
     }
@@ -35,18 +37,18 @@ pub mod tui{
         //only extracts the name or password text, respectively.
         let login_wrapper = OnEventView::new(
             LinearLayout::vertical()
-            .child(name_input)
-            .child(password_input),
-            )
-            .on_event(event::Key::Enter, |s| {
-                let name = s
-                    .call_on_name("name", |view: &mut EditView| view.get_content())
-                    .unwrap();
-                let password = s
-                    .call_on_name("password", |view: &mut EditView| view.get_content())
-                    .unwrap();
-                check_credentials(s, &name, &password)
-            });
+                .child(name_input)
+                .child(password_input),
+        )
+        .on_event(event::Key::Enter, |s| {
+            let name = s
+                .call_on_name("name", |view: &mut EditView| view.get_content())
+                .unwrap();
+            let password = s
+                .call_on_name("password", |view: &mut EditView| view.get_content())
+                .unwrap();
+            check_credentials(s, &name, &password)
+        });
 
         let login_button = Button::new("login", |s| {
             let name = s
@@ -66,13 +68,13 @@ pub mod tui{
         s.add_layer(
             Dialog::around(
                 LinearLayout::vertical()
-                .child(DummyView.fixed_height(1))
-                .child(login_wrapper)
-                .child(DummyView.fixed_height(1))
-                .child(button_row)
-                )
+                    .child(DummyView.fixed_height(1))
+                    .child(login_wrapper)
+                    .child(DummyView.fixed_height(1))
+                    .child(button_row),
+            )
             .title("Login"),
-            );
+        );
     }
 
     fn check_credentials(s: &mut Cursive, name: &str, password: &str) {
@@ -116,24 +118,26 @@ pub mod tui{
         s.add_layer(
             Dialog::around(
                 LinearLayout::vertical()
-                .child(DummyView.fixed_height(1))
-                .child(channel_input)
-                .child(button_row)
-                )
+                    .child(DummyView.fixed_height(1))
+                    .child(channel_input)
+                    .child(button_row),
+            )
             .title("Connect to a channel"),
-            );
+        );
     }
 
-//    fn open_chat(s: &mut Cursive, channel: &str, name: &str) {
+    //    fn open_chat(s: &mut Cursive, channel: &str, name: &str) {
     fn open_chat(s: &mut Cursive, channel: &str) {
         s.pop_layer();
 
         s.add_layer(
             Dialog::around(
                 LinearLayout::vertical()
-                .child(DummyView.fixed_height(1))
-                .child(TextView::new(format!("Hello"))))
-            .title("Connect to a channel"));
+                    .child(DummyView.fixed_height(1))
+                    .child(TextView::new(format!("Hello"))),
+            )
+            .title("Connect to a channel"),
+        );
     }
 
     pub fn start_client() {
@@ -154,19 +158,19 @@ pub mod tui{
         siv.add_layer(
             Dialog::around(
                 LinearLayout::vertical()
-                .child(DummyView.fixed_height(1))
-                .child(TextView::new("Type '/connect' to connect to the server:"))
-                .child(
-                    EditView::new()
-                    .on_submit(connect_to_server)
-                    .with_name("connect_input")
-                    .fixed_width(28),
+                    .child(DummyView.fixed_height(1))
+                    .child(TextView::new("Type '/connect' to connect to the server:"))
+                    .child(
+                        EditView::new()
+                            .on_submit(connect_to_server)
+                            .with_name("connect_input")
+                            .fixed_width(28),
                     )
-                .child(DummyView.fixed_height(1))
-                .child(button_row),
-                )
+                    .child(DummyView.fixed_height(1))
+                    .child(button_row),
+            )
             .title("Welcome"),
-            );
+        );
 
         siv.add_global_callback('q', |s| s.quit());
 
