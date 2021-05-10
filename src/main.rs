@@ -1,3 +1,5 @@
+pub mod view;
+
 fn main() {
-    println!("Hello, world!");
+    view::tui::tui::start_client();
 }
