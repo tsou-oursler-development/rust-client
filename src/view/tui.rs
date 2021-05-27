@@ -1,8 +1,10 @@
 pub mod tui {
+    use std::thread;
+    use std::sync::mpsc;
     use cursive::event;
     use cursive::traits::*;
     use cursive::views::{
-        Button, Dialog, DummyView, EditView, LinearLayout, OnEventView, TextView,
+        Button, Dialog, DummyView, EditView, LinearLayout, OnEventView, TextView, TextContent,
     };
     use cursive::Cursive;
 
@@ -104,10 +106,10 @@ pub mod tui {
 
         let connect_button = Button::new("Connect", |s| {
             let channel = s
-                .call_on_name("connect_input", |view: &mut EditView| view.get_content())
+                .call_on_name("channel_name", |view: &mut EditView| view.get_content())
                 .unwrap();
             //open_chat(s, &channel, &name)
-            open_chat(s, &channel);
+            open_chat(s, &channel)
         });
 
         let button_row = LinearLayout::horizontal()
@@ -129,15 +131,49 @@ pub mod tui {
     //    fn open_chat(s: &mut Cursive, channel: &str, name: &str) {
     fn open_chat(s: &mut Cursive, channel: &str) {
         s.pop_layer();
+        //they all reference the same spot on the tui?
+        let content = TextContent::new("");
+        let message_sender = content.clone();
+        let message_receiver = content.clone();
+        let (sender, receiver) = mpsc::sync_channel::<String>(0);
+        
+        
+        let _worker = thread::spawn(move || {
+            loop {
+                match receiver.recv() {
+                    Ok(message) => {
+                        message_receiver.append('\n'.to_string() + &message.to_string())
+                    }
+                    Err(mpsc::RecvError) => {
+                        return;
+                    }
+                }
+            }
+        });
+        
+        let chat_input = EditView::new().with_name("chat").fixed_width(24);
 
-        s.add_layer(
-            Dialog::around(
-                LinearLayout::vertical()
-                    .child(DummyView.fixed_height(1))
-                    .child(TextView::new(format!("Hello"))),
-            )
-            .title("Connect to a channel"),
-        );
+        let chat_wrapper = LinearLayout::horizontal()
+            .child(TextView::new("Chat:"))
+            .child(chat_input);
+
+        
+        let layout = LinearLayout::vertical()
+            .child(TextView::new_with_content(message_sender))
+            .child(chat_wrapper)
+            .child(Button::new("Send", move |s| {
+                let message = s
+                .call_on_name("chat", |view: &mut EditView| view.get_content())
+                .unwrap();
+                let _ = s
+                .call_on_name("chat", |view: &mut EditView| view.set_content(""))
+                .unwrap();
+                sender.send(message.to_string()).unwrap();
+            }))
+        .child(Button::new("Quit", |s| {
+            s.quit();
+        }));
+        s.add_layer(layout);
     }
 
     pub fn start_client() {
@@ -147,7 +183,8 @@ pub mod tui {
             let command = s
                 .call_on_name("connect_input", |view: &mut EditView| view.get_content())
                 .unwrap();
-            connect_to_server(s, &command)
+            connect_to_server(s, &command);
+            //return command.to_string();
         });
 
         let button_row = LinearLayout::horizontal()
@@ -175,5 +212,6 @@ pub mod tui {
         siv.add_global_callback('q', |s| s.quit());
 
         siv.run();
+
     }
 }
