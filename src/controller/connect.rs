@@ -1,21 +1,22 @@
-use std::io::{Read, Write};
-use std::net::TcpStream;
-use std::str;
-
-pub fn con() -> TcpStream {
-    let mut stream = TcpStream::connect("localhost:6667").expect("Couldn't connect...");
-    let mut rbuf = [0; 2048];
-    let message = irc::proto::message::Message::new(
-        Some("boursler!boursler@localhost.me"),
-        "JOIN",
-        vec!["#channel"],
-    )
-    .unwrap();
-    println!("Message: {}", message.to_string());
-    stream.write(message.to_string().as_bytes()).unwrap();
-    let res = stream.read(&mut rbuf[..]).unwrap();
-    println!("Server response: {:?}", &rbuf[..res]);
-    println!("In str form: {}", str::from_utf8(&rbuf).unwrap());
-
-    stream
+use futures::prelude::*;
+use irc::client::prelude::*;
+#[tokio::main]
+pub async fn con(nick: &str, srv: &str, port: u16, use_tls: bool, channels: &[&str]) -> () {
+    let s = |s: &str| Some(s.to_owned());
+    let config = Config {
+        nickname: s(nick),
+        server: s(srv),
+        port: Some(port),
+        use_tls: Some(use_tls),
+        channels: channels.into_iter().map(|s| s.to_string()).collect(),
+        ..Config::default()
+    };
+    let mut client = Client::from_config(config).await.unwrap();
+    let mut stream = client.stream().unwrap();
+    client.identify().unwrap();
+    while let Some(m) = stream.next().await.transpose().unwrap() {
+        println!("{:?}", m);
+    }
 }
+
+pub fn send_message() -> () {}
