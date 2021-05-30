@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use cursive::event;
 use cursive::traits::*;
 use cursive::views::{
-    Button, Dialog, DummyView, EditView, LinearLayout, OnEventView, TextView, TextContent,
+    Button, Dialog, DummyView, EditView, LinearLayout, OnEventView, TextContent, TextView,
 };
 use cursive::{Cursive, CursiveRunnable};
 
@@ -139,7 +139,6 @@ fn open_chat(s: &mut Cursive, m: &MChannel, _channel: &str) {
         .child(TextView::new("Chat:"))
         .child(chat_input);
 
-
     let m1 = Arc::clone(m);
     let m2 = Arc::clone(m);
     let layout = LinearLayout::vertical()
@@ -147,12 +146,16 @@ fn open_chat(s: &mut Cursive, m: &MChannel, _channel: &str) {
         .child(chat_wrapper)
         .child(Button::new("Send", move |s| {
             let message = s
-            .call_on_name("chat", |view: &mut EditView| view.get_content())
-            .unwrap();
+                .call_on_name("chat", |view: &mut EditView| view.get_content())
+                .unwrap();
             let _ = s
-            .call_on_name("chat", |view: &mut EditView| view.set_content(""))
-            .unwrap();
-            m1.lock().unwrap().send.send(TuiMessage::Send(message.to_string())).unwrap();
+                .call_on_name("chat", |view: &mut EditView| view.set_content(""))
+                .unwrap();
+            m1.lock()
+                .unwrap()
+                .send
+                .send(TuiMessage::Send(message.to_string()))
+                .unwrap();
         }))
         .child(Button::new("Quit", move |s| {
             m2.lock().unwrap().send.send(TuiMessage::Quit).unwrap();
@@ -168,41 +171,27 @@ pub fn start_client() -> (CursiveRunnable, Channel<TuiMessage>) {
     let mine = Arc::new(Mutex::new(mine));
 
     let m = Arc::clone(&mine);
-    let connect_button = Button::new("connect", move |s| {
-        let _command = s
-            .call_on_name("connect_input", |view: &mut EditView| view.get_content())
-            .unwrap();
+    let start_button = Button::new("Start", move |s| {
         login(s, &m);
     });
 
     let m = Arc::clone(&mine);
-    let _button_row = LinearLayout::horizontal()
-        .child(connect_button)
+    let button_row = LinearLayout::horizontal()
+        .child(start_button)
         .child(DummyView.fixed_width(2))
         .child(Button::new("[q]uit", move |s| {
             m.lock().unwrap().send.send(TuiMessage::Quit).unwrap();
             s.quit();
         }));
 
-    #[cfg(any())]
-    {
-        siv.add_layer(
-            Dialog::around(
-                LinearLayout::vertical()
-                    .child(DummyView.fixed_height(1))
-                    .child(TextView::new("Type '/connect' to connect to the server:"))
-                    .child(
-                        EditView::new()
-                            .on_submit(connect_to_server)
-                            .with_name("connect_input")
-                            .fixed_width(28),
-                    )
-                    .child(DummyView.fixed_height(1))
-                    .child(button_row),
-            )
-            .title("Welcome"),
-        );
-    }
+    siv.add_layer(
+        Dialog::around(
+            LinearLayout::vertical()
+                .child(DummyView.fixed_height(1))
+                .child(button_row),
+        )
+        .title("Welcome"),
+    );
 
     siv.add_global_callback('q', |s| s.quit());
 

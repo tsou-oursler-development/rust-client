@@ -10,8 +10,14 @@ impl<T> Channel<T> {
         let (s1, r1) = mpsc::sync_channel(0);
         let (s2, r2) = mpsc::sync_channel(0);
         (
-            Channel { send: s1, receive: r2 },
-            Channel { send: s2, receive: r1 },
+            Channel {
+                send: s1,
+                receive: r2,
+            },
+            Channel {
+                send: s2,
+                receive: r1,
+            },
         )
     }
 }
