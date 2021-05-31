@@ -1,4 +1,5 @@
 use crate::channel::Channel;
+use crate::view::tui;
 use futures::prelude::*;
 use irc::client::prelude::*;
 use std::sync::{Arc, Mutex};
@@ -30,7 +31,8 @@ pub async fn run_stream(client: &mut Client) -> () {
     while let Some(m) = stream.next().await.transpose().unwrap() {
         //rcv messages from server and send them to tui to print to screen
         println!("{:?}", m);
+        let _ = match m.command {
+            Command::Response(Response::RPL_LIST, _) => tui::TuiMessage::Send(m.to_string()),
+        };
     }
 }
-
-pub fn send_message() -> () {}
