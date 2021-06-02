@@ -3,21 +3,24 @@ pub mod view;
 
 use std::thread;
 
-use cursive::views::TextView;
 use view::tui::TuiMessage;
 
 fn main() {
-    let (mut tui, gui_channel) = view::tui::start_client();
+    let (mut tui, messages, gui_channel) = view::tui::start_client();
 
     let worker = thread::spawn(move || loop {
         let message = gui_channel.receive.recv().unwrap();
         match message {
-            TuiMessage::Send(s) => {
-                println!("send: {}", s);
-                //tui.add_layer(TextView::new(s));
+            TuiMessage::Message(name, message) => {
+                messages.append(name.to_string() + ": " + &message + "\n");
             }
             TuiMessage::Quit => {
                 println!("quit");
+                break;
+            }
+            TuiMessage::Credentials(_name, _pass) => {
+                //check_credentials(name, pass);
+                println!("Check credentials");
                 break;
             }
         }
