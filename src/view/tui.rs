@@ -97,12 +97,17 @@ fn select_channel(s: &mut Cursive, messages: &TextContent, mine: &MChannel, name
         open_chat(s, &messages_clone, &m, &name1)
     });
 
-    let _button_row = LinearLayout::horizontal()
+    let button_row = LinearLayout::horizontal()
         .child(connect_button)
         .child(DummyView.fixed_width(2))
         .child(Button::new("Quit", |s| s.quit()));
 
-    s.add_layer(Dialog::around(channel_menu).title("Select Channel"));
+    let layout = LinearLayout::vertical()
+        .child(channel_menu)
+        .child(button_row);
+        
+
+    s.add_layer(Dialog::around(layout).title("Select Channel"));
 }
 
 fn open_chat(s: &mut Cursive, messages: &TextContent, m: &MChannel, name: &str) {
