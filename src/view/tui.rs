@@ -105,7 +105,6 @@ fn select_channel(s: &mut Cursive, messages: &TextContent, mine: &MChannel, name
     let layout = LinearLayout::vertical()
         .child(channel_menu)
         .child(button_row);
-        
 
     s.add_layer(Dialog::around(layout).title("Select Channel"));
 }
