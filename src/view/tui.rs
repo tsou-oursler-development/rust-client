@@ -55,14 +55,12 @@ fn select_channel(s: &mut Cursive, messages: &TextContent, mine: &MChannel, name
         "Channel 5",
     ];
 
-    let channel_selection: Arc<Mutex<Option<usize>>> =
-        Arc::new(Mutex::new(None));
+    let channel_selection: Arc<Mutex<Option<usize>>> = Arc::new(Mutex::new(None));
     let cs = Arc::clone(&channel_selection);
 
-    let mut channel_menu = SelectView::new()
-        .on_submit(move |_, &item| {
-            *cs.lock().unwrap() = Some(item);
-        });
+    let mut channel_menu = SelectView::new().on_submit(move |_, &item| {
+        *cs.lock().unwrap() = Some(item);
+    });
     for i in 0..channels.len() {
         channel_menu.add_item(channels[i], i);
     }
