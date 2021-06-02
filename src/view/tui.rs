@@ -84,7 +84,14 @@ fn select_channel(s: &mut Cursive, messages: &TextContent, mine: &MChannel, name
         "Channel 5",
     ];
 
-    let mut channel_menu = SelectView::new();
+    let channel_selection: Arc<Mutex<Option<usize>>> =
+        Arc::new(Mutex::new(None));
+    let cs = Arc::clone(&channel_selection);
+
+    let mut channel_menu = SelectView::new()
+        .on_submit(move |_, &item| {
+            *cs.lock().unwrap() = Some(item);
+        });
     for i in 0..channels.len() {
         channel_menu.add_item(channels[i], i);
     }
@@ -93,7 +100,7 @@ fn select_channel(s: &mut Cursive, messages: &TextContent, mine: &MChannel, name
 
     let m = Arc::clone(mine);
     let connect_button = Button::new("Connect", move |s| {
-        let _channel = channel_menu.selection();
+        let _channel = *channel_selection.lock().unwrap();
         open_chat(s, &messages_clone, &m, &name1)
     });
 
