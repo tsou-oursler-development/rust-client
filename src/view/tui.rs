@@ -2,7 +2,8 @@ use std::sync::{Arc, Mutex};
 
 use cursive::traits::*;
 use cursive::views::{
-    Button, Dialog, DummyView, EditView, LinearLayout, OnEventView, TextContent, TextView,
+    Button, Dialog, DummyView, EditView, LinearLayout, OnEventView, SelectView, TextContent,
+    TextView,
 };
 use cursive::{Cursive, CursiveRunnable};
 
@@ -45,6 +46,8 @@ fn check_credentials(
 fn select_channel(s: &mut Cursive, messages: &TextContent, mine: &MChannel, name: &str) {
     s.pop_layer();
     let name1 = name.to_string().clone();
+
+    /*
     let channel_input = LinearLayout::horizontal()
         .child(TextView::new("Channel name:"))
         .child(EditView::new().with_name("channel_name").fixed_width(24));
@@ -61,7 +64,7 @@ fn select_channel(s: &mut Cursive, messages: &TextContent, mine: &MChannel, name
     let button_row = LinearLayout::horizontal()
         .child(connect_button)
         .child(DummyView.fixed_width(2))
-        .child(Button::new("[q]uit", |s| s.quit()));
+        .child(Button::new("Quit", |s| s.quit()));
 
     s.add_layer(
         Dialog::around(
@@ -71,7 +74,35 @@ fn select_channel(s: &mut Cursive, messages: &TextContent, mine: &MChannel, name
                 .child(button_row),
         )
         .title("Connect to a channel"),
-    );
+    );*/
+
+    let channels = vec![
+        "Channel 1",
+        "Channel 2",
+        "Channel 3",
+        "Channel 4",
+        "Channel 5",
+    ];
+
+    let mut channel_menu = SelectView::new();
+    for i in 0..channels.len() {
+        channel_menu.add_item(channels[i], i);
+    }
+
+    let messages_clone = messages.clone();
+
+    let m = Arc::clone(mine);
+    let connect_button = Button::new("Connect", move |s| {
+        let _channel = channel_menu.selection();
+        open_chat(s, &messages_clone, &m, &name1)
+    });
+
+    let _button_row = LinearLayout::horizontal()
+        .child(connect_button)
+        .child(DummyView.fixed_width(2))
+        .child(Button::new("Quit", |s| s.quit()));
+
+    s.add_layer(Dialog::around(channel_menu).title("Select Channel"));
 }
 
 fn open_chat(s: &mut Cursive, messages: &TextContent, m: &MChannel, name: &str) {
