@@ -47,35 +47,6 @@ fn select_channel(s: &mut Cursive, messages: &TextContent, mine: &MChannel, name
     s.pop_layer();
     let name1 = name.to_string().clone();
 
-    /*
-    let channel_input = LinearLayout::horizontal()
-        .child(TextView::new("Channel name:"))
-        .child(EditView::new().with_name("channel_name").fixed_width(24));
-
-    let messages_clone = messages.clone();
-    let m = Arc::clone(mine);
-    let connect_button = Button::new("Connect", move |s| {
-        let _channel = s
-            .call_on_name("channel_name", |view: &mut EditView| view.get_content())
-            .unwrap();
-        open_chat(s, &messages_clone, &m, &name1)
-    });
-
-    let button_row = LinearLayout::horizontal()
-        .child(connect_button)
-        .child(DummyView.fixed_width(2))
-        .child(Button::new("Quit", |s| s.quit()));
-
-    s.add_layer(
-        Dialog::around(
-            LinearLayout::vertical()
-                .child(DummyView.fixed_height(1))
-                .child(channel_input)
-                .child(button_row),
-        )
-        .title("Connect to a channel"),
-    );*/
-
     let channels = vec![
         "Channel 1",
         "Channel 2",
@@ -84,7 +55,14 @@ fn select_channel(s: &mut Cursive, messages: &TextContent, mine: &MChannel, name
         "Channel 5",
     ];
 
-    let mut channel_menu = SelectView::new();
+    let channel_selection: Arc<Mutex<Option<usize>>> =
+        Arc::new(Mutex::new(None));
+    let cs = Arc::clone(&channel_selection);
+
+    let mut channel_menu = SelectView::new()
+        .on_submit(move |_, &item| {
+            *cs.lock().unwrap() = Some(item);
+        });
     for i in 0..channels.len() {
         channel_menu.add_item(channels[i], i);
     }
@@ -93,8 +71,8 @@ fn select_channel(s: &mut Cursive, messages: &TextContent, mine: &MChannel, name
 
     let m = Arc::clone(mine);
     let connect_button = Button::new("Connect", move |s| {
-        let _channel = channel_menu.selection();
-        open_chat(s, &messages_clone, &m, &name1)
+        let channel = *channel_selection.lock().unwrap();
+        open_chat(s, &messages_clone, &m, &name1, &channels[channel.unwrap()])
     });
 
     let button_row = LinearLayout::horizontal()
@@ -109,12 +87,14 @@ fn select_channel(s: &mut Cursive, messages: &TextContent, mine: &MChannel, name
     s.add_layer(Dialog::around(layout).title("Select Channel"));
 }
 
-fn open_chat(s: &mut Cursive, messages: &TextContent, m: &MChannel, name: &str) {
+fn open_chat(s: &mut Cursive, messages: &TextContent, m: &MChannel, name: &str, channel: &str) {
     s.pop_layer();
     let messages_clone = messages.clone();
     let name1 = name.to_string().clone();
 
     let chat_input = EditView::new().with_name("chat").fixed_width(24);
+
+    let header = TextContent::new("Connected to ".to_string() + channel);
 
     let chat_wrapper = LinearLayout::horizontal()
         .child(TextView::new("Chat:"))
@@ -123,6 +103,8 @@ fn open_chat(s: &mut Cursive, messages: &TextContent, m: &MChannel, name: &str) 
     let m1 = Arc::clone(m);
     let m2 = Arc::clone(m);
     let layout = LinearLayout::vertical()
+        .child(TextView::new_with_content(header))
+        .child(DummyView.fixed_height(1))
         .child(TextView::new_with_content(messages_clone))
         .child(chat_wrapper)
         .child(Button::new("Send", move |s| {
