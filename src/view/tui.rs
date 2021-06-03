@@ -33,7 +33,11 @@ fn check_credentials(
         .unwrap()
         .send
         //Send server?
-        .send(TuiMessage::Credentials(name.to_owned(), password.to_owned(), server.to_owned()))
+        .send(TuiMessage::Credentials(
+            name.to_owned(),
+            password.to_owned(),
+            server.to_owned(),
+        ))
         .unwrap();
 
     //Receive credentials success or failure
