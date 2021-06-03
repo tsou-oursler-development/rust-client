@@ -1,8 +1,10 @@
 pub mod channel;
+mod controller;
+mod controller;
 pub mod view;
 
+use crate::controller::connect;
 use std::thread;
-
 use view::tui::TuiMessage;
 
 fn main() {
