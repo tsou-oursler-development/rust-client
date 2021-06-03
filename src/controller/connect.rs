@@ -1,21 +1,94 @@
-use std::io::{Read, Write};
-use std::net::TcpStream;
-use std::str;
+use crate::channel::Channel;
+use futures::prelude::*;
+use irc::client::prelude::*;
+use std::sync::{Arc, Mutex};
+use thiserror::Error;
 
-pub fn con() -> TcpStream {
-    let mut stream = TcpStream::connect("localhost:6667").expect("Couldn't connect...");
-    let mut rbuf = [0; 2048];
-    let message = irc::proto::message::Message::new(
-        Some("boursler!boursler@localhost.me"),
-        "JOIN",
-        vec!["#channel"],
-    )
-    .unwrap();
-    println!("Message: {}", message.to_string());
-    stream.write(message.to_string().as_bytes()).unwrap();
-    let res = stream.read(&mut rbuf[..]).unwrap();
-    println!("Server response: {:?}", &rbuf[..res]);
-    println!("In str form: {}", str::from_utf8(&rbuf).unwrap());
+#[derive(Error, Debug)]
+pub enum ConError {
+    #[error("No command supplied")]
+    ArgError(),
+}
 
-    stream
+type GenericError = Box<dyn std::error::Error + Send + Sync + 'static>;
+type GenericResult<T> = Result<T, GenericError>;
+pub async fn start_client(
+    nick: &str,
+    srv: &str,
+    port: u16,
+    use_tls: bool,
+    channels: &[&str],
+) -> (Client, Sender) {
+    let s = |s: &str| Some(s.to_owned());
+    let config = Config {
+        nickname: s(nick),
+        server: s(srv),
+        port: Some(port),
+        use_tls: Some(use_tls),
+        channels: channels.into_iter().map(|s| s.to_string()).collect(),
+        ..Config::default()
+    };
+    let mut client = Client::from_config(config).await.unwrap();
+    let sender = client.sender();
+    //need a thread to run_stream and a thread to return client, sender
+    run_stream(&mut client);
+    (client, sender)
+}
+
+#[tokio::main]
+pub async fn run_stream(client: &mut Client) -> () {
+    let mut stream = client.stream().unwrap();
+    client.identify().unwrap();
+    while let Some(m) = stream.next().await.transpose().unwrap() {
+        //rcv messages from server and send them to tui to print to screen
+        println!("{:?}", m);
+        /*let _ = match m.command {
+            Command::Response(Response::RPL_LIST, _) =>
+            //_tui::TuiMessage::Send(m.to_string()),
+            {
+                println!("{:?}", m)
+            }
+        }; */
+    }
+}
+
+//fn into_args(index: usize, v: &mut Vec<&str>) -> &'a str {
+//  &v.drain(index..).collect::<Vec<_>>().concat()
+//}
+pub fn receive(sender: &Sender, message: &str) -> GenericResult<()> {
+    //irc::error::Result<()> {
+    let mut v: Vec<_> = message.split(' ').collect();
+    let chan = match &v[1].starts_with("#") {
+        true => {
+            let check = v.remove(1);
+            if check.is_channel_name() {
+                check
+            } else {
+                ""
+            }
+        }
+        false => "",
+    };
+    let res = match v[0] {
+        "/PRIVMESSAGE" => sender.send_privmsg(chan, v.drain(1..).collect::<Vec<_>>().concat())?,
+        "/JOIN" => {
+            if v.len() == 1 {
+                sender.send_join(chan)?
+            } else {
+                sender.send_join(v.drain(1..).collect::<Vec<_>>().join(","))?
+            }
+        }
+        "/INVITE" => sender.send_invite(chan, v.remove(1))?,
+        "/TOPIC" => sender.send_topic(chan, v.remove(1))?,
+        "/PART" => {
+            if v.len() == 1 {
+                sender.send_part(chan)?
+            } else {
+                sender.send_part(v.drain(1..).collect::<Vec<_>>().concat())?
+            }
+        }
+        "/Quit" => sender.send_quit(v.drain(1..).collect::<Vec<_>>().concat())?,
+        _ => return Err(GenericError::from(ConError::ArgError())),
+    };
+    Ok(res)
 }
