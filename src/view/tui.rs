@@ -12,7 +12,7 @@ use crate::channel::Channel;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TuiMessage {
     Message(String, String),
-    Credentials(String, String),
+    Credentials(&str, &str, &str),
     Quit,
 }
 
@@ -22,11 +22,10 @@ fn check_credentials(
     s: &mut Cursive,
     messages: &TextContent,
     m: &MChannel,
-    _server: &str,
+    server: &str,
     name: &str,
-    _password: &str,
+    password: &str,
 ) {
-    /*
     let m1 = Arc::clone(m);
     let m2 = Arc::clone(m);
 
@@ -34,13 +33,12 @@ fn check_credentials(
         .unwrap()
         .send
         //Send server?
-        .send(TuiMessage::Credentials(name.to_string(), password.to_string()))
+        .send(TuiMessage::Credentials(name, password, server))
         .unwrap();
-    */
 
     //Receive credentials success or failure
     //If success:
-    select_channel(s, &messages, &m, name);
+    select_channel(s, &messages, &m2, name);
 }
 
 fn select_channel(s: &mut Cursive, messages: &TextContent, mine: &MChannel, name: &str) {
