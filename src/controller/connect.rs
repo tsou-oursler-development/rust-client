@@ -15,6 +15,7 @@ pub enum ConMessage {
     Message(String),
     Credentials(String),
     ChanList(Vec<String>),
+    Ok,
     Quit,
 }
 
@@ -60,18 +61,18 @@ pub async fn run_stream(client: &mut Client, my_channel: &MChannel) -> () {
     while let Some(m) = stream.next().await.transpose().unwrap() {
         //rcv messages from server and send them to tui to print to screen
         println!("{:?}", m);
-        m1.lock()
-            .unwrap()
-            .send
-            .send(ConMessage::Message(m.to_string()))
-            .unwrap();
-        /*let _ = match m.command {
-            Command::Response(Response::RPL_LIST, _) =>
-            //_tui::ConMessage::Send(m.to_string()),
-            {
-                println!("{:?}", m)
+
+        let _ = match m.command {
+            Command::Response(Response::RPL_MOTD, _) => m1
+                .lock()
+                .unwrap()
+                .send
+                .send(ConMessage::Message(m.to_string()))
+                .unwrap(),
+            Command::Response(Response::RPL_WELCOME, _) => {
+                m1.lock().unwrap().send.send(ConMessage::Ok).unwrap()
             }
-        }; */
+        };
     }
 }
 
