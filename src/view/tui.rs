@@ -12,7 +12,7 @@ use crate::channel::Channel;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TuiMessage {
     Message(String, String),
-    Credentials(&str, &str, &str),
+    Credentials(String, String, String),
     Quit,
 }
 
@@ -33,7 +33,7 @@ fn check_credentials(
         .unwrap()
         .send
         //Send server?
-        .send(TuiMessage::Credentials(name, password, server))
+        .send(TuiMessage::Credentials(name.to_owned(), password.to_owned(), server.to_owned()))
         .unwrap();
 
     //Receive credentials success or failure

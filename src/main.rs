@@ -2,6 +2,10 @@ pub mod channel;
 mod controller;
 pub mod view;
 
+use std::sync::{Arc, Mutex};
+use std::sync::mpsc;
+use crate::channel::Channel;
+use async_std::task;
 use crate::controller::connect;
 use std::thread;
 use view::tui::TuiMessage;
@@ -16,34 +20,39 @@ struct con {
     channels: &[&str],
 }
 */
+type MChannel = Arc<Mutex<Channel<ConMessage>>>;
 
 fn main() {
     let (mut tui, messages, gui_channel) = view::tui::start_client();
-    let mut nick: &str = "";
-    let mut srv = "";
+    let mut nick: String = "".to_string();
+    let mut srv: String = "".to_string();
     let port = 6667;
     let use_tls = false;
-    let mut channels = Vec::<&str>::new();
+    let mut my_channel: String = "".to_string();
+    //let (con_channel_send, con_channel_receive) = Channel::<ConMessage>::pair();
+    //let mut con_channel = &MChannel::new(Mutex::new(Channel::<ConMessage>));
+    //let mut con_channel = Channel::<ConMessage>::pair();
+    let (mut con_send, mut con_rcv) = Channel::<ConMessage>::pair();
+
 
     let tui_worker = thread::spawn(move || loop {
         let message = gui_channel.receive.recv().unwrap();
-        match message {
+        match message{
             TuiMessage::Message(name, message) => {
                 messages.append(name.to_string() + ": " + &message + "\n");
             }
             TuiMessage::Quit => {
                 println!("quit");
-                break;
             }
             TuiMessage::Credentials(name, channel, server) => {
-                //check_credentials(name, pass);
-                nick = name;
-                //channels.push(&channel);
-                //srv = &server;
-
                 println!("Check credentials");
-
-                break;
+                nick = name;
+                srv = server;
+                my_channel = channel;
+                let (client, sender, my_con_channel) = task::block_on(controller::connect::start_client(&nick, &srv, port, use_tls, &my_channel));
+                //let receiver = Arc::new(Mutex::new(my_con_channel));
+                //con_channel = &Arc::clone(&receiver);
+                con_rcv = my_con_channel;
             }
         }
     });

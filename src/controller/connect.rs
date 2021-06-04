@@ -26,9 +26,11 @@ pub async fn start_client (
     srv: &str,
     port: u16,
     use_tls: bool,
-    channels: &[&str],
+    //channels: &[&str],
+    channel: &str,
 ) -> (Client, Sender, Channel<ConMessage>) {
-    
+
+    println!("connect::start_client() called");
     let (mine, theirs) = Channel::pair();
     let mine = Arc::new(Mutex::new(mine));
     let m = Arc::clone(&mine);
@@ -39,7 +41,8 @@ pub async fn start_client (
         server: s(srv),
         port: Some(port),
         use_tls: Some(use_tls),
-        channels: channels.into_iter().map(|s| s.to_string()).collect(),
+        //channels: channels.into_iter().map(|s| s.to_string()).collect(),
+        channels: vec![channel.to_string()],
         ..Config::default()
     };
     let mut client = Client::from_config(config).await.unwrap();
@@ -51,6 +54,7 @@ pub async fn start_client (
 
 #[tokio::main]
 pub async fn run_stream(client: &mut Client, my_channel: &MChannel) -> () {
+    println!("connect::run_stream() called");
     let mut stream = client.stream().unwrap();
     client.identify().unwrap();
     let m1 = Arc::clone(my_channel);
