@@ -68,6 +68,7 @@ fn main() {
                 //let receiver = Arc::new(Mutex::new(my_con_channel));
                 //con_channel = &Arc::clone(&receiver);
                 con_rcv = my_con_channel;
+                //call tui::open_chat
             }
         }
     });
