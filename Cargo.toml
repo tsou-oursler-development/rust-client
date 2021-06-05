@@ -8,9 +8,13 @@ edition = "2018"
 
 [dependencies]
 irc="0.15.0"
+futures = "*"
+thiserror = "*"
 
+[dependencies.async-std]
+version = "1.9"
+features = ["attributes"]
 
 [dependencies.cursive]
 version = "0.16.3"
 features = ["crossterm-backend"]
-
