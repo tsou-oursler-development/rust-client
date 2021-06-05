@@ -45,7 +45,16 @@ fn main() {
     let (mut con_send, mut con_rcv) = Channel::<ConMessage>::pair();
 
     let tui_worker = thread::spawn(move || loop {
-        let message = gui_channel.receive.recv().unwrap();
+        println!("before receiving from gui");
+        let message = match gui_channel.receive.recv() {
+            Ok(t) => t,
+            Err(err) => {
+                println!("{:?}", err);
+                return ();
+            }
+        };
+
+        println!("after receiving from gui");
         match message {
             TuiMessage::Message(name, message) => {
                 messages.append(name.to_string() + ": " + &message + "\n");
