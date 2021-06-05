@@ -24,7 +24,7 @@ fn check_credentials(
     m: &MChannel,
     server: &str,
     name: &str,
-    password: &str,
+    irc_channel: &str,
 ) {
     let m1 = Arc::clone(m);
     let m2 = Arc::clone(m);
@@ -35,16 +35,15 @@ fn check_credentials(
         //Send server?
         .send(TuiMessage::Credentials(
             name.to_owned(),
-            password.to_owned(),
+            irc_channel.to_owned(),
             server.to_owned(),
         ))
         .unwrap();
-
     //Receive credentials success or failure
     //If success:
-    select_channel(s, &messages, &m2, name);
+    //select_channel(s, &messages, &m2, name);
 }
-
+/*
 fn select_channel(s: &mut Cursive, messages: &TextContent, mine: &MChannel, name: &str) {
     s.pop_layer();
     let name1 = name.to_string().clone();
@@ -86,6 +85,7 @@ fn select_channel(s: &mut Cursive, messages: &TextContent, mine: &MChannel, name
 
     s.add_layer(Dialog::around(layout).title("Select Channel"));
 }
+*/
 
 fn open_chat(s: &mut Cursive, messages: &TextContent, m: &MChannel, name: &str, channel: &str) {
     s.pop_layer();
@@ -149,9 +149,9 @@ pub fn start_client() -> (CursiveRunnable, TextContent, Channel<TuiMessage>) {
         .child(TextView::new("Name:"))
         .child(EditView::new().with_name("name").fixed_width(24));
 
-    let password_input = LinearLayout::horizontal()
-        .child(TextView::new("Password:"))
-        .child(EditView::new().with_name("password").fixed_width(20));
+    let irc_channel_input = LinearLayout::horizontal()
+        .child(TextView::new("Channel:"))
+        .child(EditView::new().with_name("irc_channel").fixed_width(20));
 
     let m = Arc::clone(&mine);
     let login_button = Button::new("Login", move |s| {
@@ -161,10 +161,10 @@ pub fn start_client() -> (CursiveRunnable, TextContent, Channel<TuiMessage>) {
         let name = s
             .call_on_name("name", |view: &mut EditView| view.get_content())
             .unwrap();
-        let password = s
-            .call_on_name("password", |view: &mut EditView| view.get_content())
+        let irc_channel = s
+            .call_on_name("irc_channel", |view: &mut EditView| view.get_content())
             .unwrap();
-        check_credentials(s, &messages, &m, &server, &name, &password)
+        check_credentials(s, &messages, &m, &server, &name, &irc_channel)
     });
 
     let login_wrapper = OnEventView::new(
@@ -172,19 +172,20 @@ pub fn start_client() -> (CursiveRunnable, TextContent, Channel<TuiMessage>) {
             .child(server_input)
             .child(DummyView.fixed_height(1))
             .child(name_input)
-            .child(password_input),
+            .child(irc_channel_input),
     );
     /*
-    .on_event(event::Key::Enter, move |s| {
-    let name = s
-    .call_on_name("name", |view: &mut EditView| view.get_content())
-    .unwrap();
-    let password = s
-    .call_on_name("password", |view: &mut EditView| view.get_content())
-    .unwrap();
-    check_credentials(s, &m, &name, &password)
-    });
-    */
+        .on_event(event::Key::Enter, move |s| {
+        let name = s
+        .call_on_name("name", |view: &mut EditView| view.get_content())
+        .unwrap();
+        let irc_channel = s
+        .call_on_name("irc_channel", |view: &mut EditView| view.get_content())
+        .unwrap();
+        check_credentials(s, &m, &name, &irc_channel)
+    use controller::connect::ConMessage;
+        });
+        */
 
     let m = Arc::clone(&mine);
 

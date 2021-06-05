@@ -6,7 +6,6 @@ use crate::channel::Channel;
 use crate::controller::connect;
 use async_std::task;
 use controller::connect::ConMessage;
-use controller::connect::ConMessage;
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -50,6 +49,7 @@ fn main() {
         match message {
             TuiMessage::Message(name, message) => {
                 messages.append(name.to_string() + ": " + &message + "\n");
+                //call connect::receive
             }
             TuiMessage::Quit => {
                 println!("quit");
