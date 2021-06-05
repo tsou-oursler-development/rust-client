@@ -72,6 +72,7 @@ pub async fn run_stream(client: &mut Client, my_channel: &MChannel) -> () {
             Command::Response(Response::RPL_WELCOME, _) => {
                 m1.lock().unwrap().send.send(ConMessage::Ok).unwrap()
             }
+            _ => (),
         };
     }
 }
