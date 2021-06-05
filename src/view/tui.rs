@@ -26,6 +26,14 @@ fn check_credentials(
     name: &str,
     irc_channel: &str,
 ) {
+    s.pop_layer();
+
+    let messages_clone = messages.clone();
+
+    let layout = LinearLayout::vertical().child(TextView::new_with_content(messages_clone));
+
+    s.add_layer(Dialog::around(layout).title("Login info for debugging (this screen is created in check_credentials() and appended to in main()): "));
+
     let m1 = Arc::clone(m);
     let m2 = Arc::clone(m);
 
@@ -43,7 +51,6 @@ fn check_credentials(
     //If success:
     //select_channel(s, &messages, &m2, name);
 }
-/*
 fn select_channel(s: &mut Cursive, messages: &TextContent, mine: &MChannel, name: &str) {
     s.pop_layer();
     let name1 = name.to_string().clone();
@@ -85,7 +92,6 @@ fn select_channel(s: &mut Cursive, messages: &TextContent, mine: &MChannel, name
 
     s.add_layer(Dialog::around(layout).title("Select Channel"));
 }
-*/
 
 fn open_chat(s: &mut Cursive, messages: &TextContent, m: &MChannel, name: &str, channel: &str) {
     s.pop_layer();

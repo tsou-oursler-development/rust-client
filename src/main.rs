@@ -59,6 +59,9 @@ fn main() {
                 nick = name;
                 srv = server;
                 my_channel = channel;
+                messages.append(
+                    "NAME: ".to_string() + &nick + " CHANNEL: " + &my_channel + " SERVER: " + &srv,
+                );
                 let (client, sender, my_con_channel) = task::block_on(
                     controller::connect::start_client(&nick, &srv, port, use_tls, &my_channel),
                 );
