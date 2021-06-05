@@ -29,7 +29,8 @@ fn check_credentials(
     let m1 = Arc::clone(m);
     let m2 = Arc::clone(m);
 
-    m1.lock()
+    let p = match m1
+        .lock()
         .unwrap()
         .send
         //Send server?
@@ -37,8 +38,13 @@ fn check_credentials(
             name.to_owned(),
             password.to_owned(),
             server.to_owned(),
-        ))
-        .unwrap();
+        )) {
+        Ok(()) => (),
+        Err(e) => {
+            println!("{:?}", e);
+            return ();
+        }
+    };
 
     //Receive credentials success or failure
     //If success:
@@ -50,7 +56,7 @@ fn select_channel(s: &mut Cursive, messages: &TextContent, mine: &MChannel, name
     let name1 = name.to_string().clone();
 
     let channels = vec![
-        "Channel 1",
+        "#Channel 1",
         "Channel 2",
         "Channel 3",
         "Channel 4",
