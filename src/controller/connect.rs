@@ -48,7 +48,7 @@ pub async fn start_client(
     let mut client = Client::from_config(config).await.unwrap();
     let sender = client.sender();
     //need a thread to run_stream and a thread to return client, sender
-    run_stream(&mut client, &m);
+    //run_stream(&mut client, &m);
     (client, sender, theirs)
 }
 
