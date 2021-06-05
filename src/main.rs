@@ -1,101 +1,70 @@
-pub mod channel;
 mod controller;
-pub mod view;
+mod view;
 
-use crate::channel::Channel;
-use crate::controller::connect;
-use async_std::task;
-use controller::connect::ConMessage;
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use view::tui::TuiMessage;
 
-/*
-struct con {
-    nick: &str,
-    srv: &str,
-    port: u16,
-    use_tls: bool,
-    channels: &[&str],
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Event {
+    TuiMessage(String, String),
+    TuiCredentials(String, String, String),
+    TuiQuit,
+    IrcMotd(String),
+    IrcWelcome,
+    IrcMessage(String),
 }
-*/
-type MChannel = Arc<Mutex<Channel<ConMessage>>>;
 
-/*
-struct con {
-    nick: &str,
-    srv: &str,
-    port: u16,
-    use_tls: bool,
-    channels: &[&str],
-}
-*/
-
-fn main() {
-    let (mut tui, messages, gui_channel) = view::tui::start_client();
-    let mut nick: String = "".to_string();
-    let mut srv: String = "".to_string();
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let (con_send, con_rcv) = mpsc::channel();
+    let (mut tui, messages) = view::start_client(con_send.clone());
     let port = 6667;
     let use_tls = false;
-    let mut my_channel: String = "".to_string();
-    //let (con_channel_send, con_channel_receive) = Channel::<ConMessage>::pair();
-    //let mut con_channel = &MChannel::new(Mutex::new(Channel::<ConMessage>));
-    //let mut con_channel = Channel::<ConMessage>::pair();
-    let (mut con_send, mut con_rcv) = Channel::<ConMessage>::pair();
+    let ctlr = Arc::new(Mutex::new(None));
 
-    let tui_worker = thread::spawn(move || loop {
-        let message = gui_channel.receive.recv().unwrap();
-        match message {
-            TuiMessage::Message(name, message) => {
-                messages.append(name.to_string() + ": " + &message + "\n");
-                //call connect::receive
-            }
-            TuiMessage::Quit => {
-                println!("quit");
-            }
-            TuiMessage::Credentials(name, channel, server) => {
-                println!("Check credentials");
-                nick = name;
-                srv = server;
-                my_channel = channel;
-                messages.append(
-                    "NAME: ".to_string() + &nick + " CHANNEL: " + &my_channel + " SERVER: " + &srv,
-                );
-                let (client, sender, my_con_channel) = task::block_on(
-                    controller::connect::start_client(&nick, &srv, port, use_tls, &my_channel),
-                );
-                //let receiver = Arc::new(Mutex::new(my_con_channel));
-                //con_channel = &Arc::clone(&receiver);
-                con_rcv = my_con_channel;
-                //call tui::open_chat
+    let main_thread = thread::spawn(move || {
+        loop {
+            let message = con_rcv.recv().expect("receive channel closed");
+            match message {
+                Event::TuiMessage(name, message) => {
+                    eprintln!("received message from {}: {}", name, message);
+                    messages.append(format!("{}: {}\n", name, message));
+                }
+                Event::TuiQuit => {
+                    eprintln!("quit");
+                    // TODO: shut down client and tui.
+                    break;
+                }
+                Event::TuiCredentials(name, channel, server) => {
+                    eprintln!("Check credentials");
+                    messages.append(format!(
+                        "NAME: {} CHANNEL: {} SERVER: {}",
+                        name,
+                        channel,
+                        server,
+                    ));
+                    let ctlr = Arc::clone(&ctlr);
+                    let event_channel = con_send.clone();
+                    let _ = thread::spawn(move || {
+                        let client = controller::create_client(
+                            &name,
+                            &server,
+                            port,
+                            use_tls,
+                            &channel,
+                        );
+                        let mut rcvr = ctlr.lock().unwrap();
+                        *rcvr = Some(client);
+                        drop(rcvr);
+                        controller::start_receive(ctlr, event_channel)
+                    });
+                }
+                _ => todo!()
             }
         }
     });
 
-    /*
-        let (client, sender, connect_channel) = controller::connect::start_client();
-        let connect_worker = thread::spawn(move || loop {
-            let message = connect_channel.receive.recv().unwrap();
-            match message {
-                ConMessage::Message(message) => {
-                    messages.append(message.to_string() + "\n");
-                }
-                ConMessage::Quit => {
-                    println!("quit");
-                    break;
-                }
-                _ => {
-                    ();
-                    break;
-                }
-            }
-        });
-
-    */
-
     tui.run();
-
-    tui_worker.join().unwrap();
-    // connect_worker.join().unwrap();
+    main_thread.join().unwrap();
+    Ok(())
 }

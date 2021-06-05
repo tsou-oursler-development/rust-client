@@ -1,8 +1,10 @@
-use crate::channel::Channel;
+use crate::*;
+
 use futures::prelude::*;
 use irc::client::prelude::*;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, mpsc};
 use thiserror::Error;
+use async_std::task;
 
 #[derive(Error, Debug)]
 pub enum ConError {
@@ -10,30 +12,19 @@ pub enum ConError {
     ArgError(),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ConMessage {
-    Message(String),
-    Credentials(String),
-    ChanList(Vec<String>),
-    Ok,
-    Quit,
-}
+pub type ClientHandle = Arc<Mutex<Option<Client>>>;
 
-type MChannel = Arc<Mutex<Channel<ConMessage>>>;
 type GenericError = Box<dyn std::error::Error + Send + Sync + 'static>;
 type GenericResult<T> = Result<T, GenericError>;
-pub async fn start_client(
+
+pub fn create_client(
     nick: &str,
     srv: &str,
     port: u16,
     use_tls: bool,
-    //channels: &[&str],
     channel: &str,
-) -> (Client, Sender, Channel<ConMessage>) {
+) -> Client {
     println!("connect::start_client() called");
-    let (mine, theirs) = Channel::pair();
-    let mine = Arc::new(Mutex::new(mine));
-    let m = Arc::clone(&mine);
     let s = |s: &str| Some(s.to_owned());
 
     let config = Config {
@@ -41,47 +32,45 @@ pub async fn start_client(
         server: s(srv),
         port: Some(port),
         use_tls: Some(use_tls),
-        //channels: channels.into_iter().map(|s| s.to_string()).collect(),
         channels: vec![channel.to_string()],
         ..Config::default()
     };
-    let mut client = Client::from_config(config).await.unwrap();
-    let sender = client.sender();
-    //need a thread to run_stream and a thread to return client, sender
-    //run_stream(&mut client, &m);
-    (client, sender, theirs)
+    task::block_on( async {
+        Client::from_config(config).await
+    }).expect("credential fail")
 }
 
-#[tokio::main]
-pub async fn run_stream(client: &mut Client, my_channel: &MChannel) -> () {
-    println!("connect::run_stream() called");
+pub fn start_receive(client: ClientHandle, event_channel: mpsc::Sender<Event>) {
+    task::block_on(async { run_stream(client, event_channel).await });
+}
+
+async fn run_stream(client: ClientHandle, my_channel: mpsc::Sender<Event>) {
+    eprintln!("connect::run_stream() called");
+    let mut client = client.lock().unwrap();
+    let client = client.as_mut().unwrap();
     let mut stream = client.stream().unwrap();
     client.identify().unwrap();
-    let m1 = Arc::clone(my_channel);
+    let m1 = my_channel.clone();
     while let Some(m) = stream.next().await.transpose().unwrap() {
         //rcv messages from server and send them to tui to print to screen
-        println!("{:?}", m);
+        eprintln!("{:?}", m);
 
         let _ = match m.command {
-            Command::Response(Response::RPL_MOTD, _) => m1
-                .lock()
-                .unwrap()
-                .send
-                .send(ConMessage::Message(m.to_string()))
-                .unwrap(),
-            Command::Response(Response::RPL_WELCOME, _) => {
-                m1.lock().unwrap().send.send(ConMessage::Ok).unwrap()
+            Command::Response(Response::RPL_MOTD, _) => {
+                m1.send(Event::IrcMotd(m.to_string())).unwrap()
             }
-            _ => (),
+            Command::Response(Response::RPL_WELCOME, _) => {
+                m1.send(Event::IrcWelcome).unwrap()
+            }
+            Command::Response(Response::RPL_NONE, _) => {
+                m1.send(Event::IrcMessage(m.to_string())).unwrap()
+            },
+            _ => eprintln!("unknown message from IRC: {}", m.to_string()),
         };
     }
 }
 
-//fn into_args(index: usize, v: &mut Vec<&str>) -> &'a str {
-//  &v.drain(index..).collect::<Vec<_>>().concat()
-//}
-pub fn receive(sender: &Sender, message: &str) -> GenericResult<()> {
-    //irc::error::Result<()> {
+pub fn send(client: &Arc<Mutex<Client>>, message: &str) -> GenericResult<()> {
     let mut v: Vec<_> = message.split(' ').collect();
     let chan = match &v[1].starts_with("#") {
         true => {
@@ -94,6 +83,7 @@ pub fn receive(sender: &Sender, message: &str) -> GenericResult<()> {
         }
         false => "",
     };
+    let sender = client.lock().unwrap();
     let res = match v[0] {
         "/PRIVMESSAGE" => sender.send_privmsg(chan, v.drain(1..).collect::<Vec<_>>().concat())?,
         "/JOIN" => {

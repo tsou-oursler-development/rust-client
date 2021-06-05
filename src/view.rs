@@ -1,27 +1,18 @@
-use std::sync::{Arc, Mutex};
+use crate::*;
+
+use std::sync::mpsc;
 
 use cursive::traits::*;
 use cursive::views::{
-    Button, Dialog, DummyView, EditView, LinearLayout, OnEventView, SelectView, TextContent,
+    Button, Dialog, DummyView, EditView, LinearLayout, OnEventView, TextContent,
     TextView,
 };
 use cursive::{Cursive, CursiveRunnable};
 
-use crate::channel::Channel;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TuiMessage {
-    Message(String, String),
-    Credentials(String, String, String),
-    Quit,
-}
-
-type MChannel = Arc<Mutex<Channel<TuiMessage>>>;
-
 fn check_credentials(
     s: &mut Cursive,
     messages: &TextContent,
-    m: &MChannel,
+    mine: &mpsc::Sender<Event>,
     server: &str,
     name: &str,
     irc_channel: &str,
@@ -34,29 +25,24 @@ fn check_credentials(
 
     s.add_layer(Dialog::around(layout).title("Login info for debugging (this screen is created in check_credentials() and appended to in main()): "));
 
-    let m1 = Arc::clone(m);
-    let m2 = Arc::clone(m);
-
-    m1.lock()
-        .unwrap()
-        .send
-        //Send server?
-        .send(TuiMessage::Credentials(
+    let m = mine.clone();
+    m
+        .send(Event::TuiCredentials(
             name.to_owned(),
             irc_channel.to_owned(),
             server.to_owned(),
         ))
         .unwrap();
-    //Receive credentials success or failure
-    //If success:
-    //select_channel(s, &messages, &m2, name);
+    open_chat(s, messages, m, name, irc_channel);
 }
-fn select_channel(s: &mut Cursive, messages: &TextContent, mine: &MChannel, name: &str) {
+
+/*
+fn select_channel(s: &mut Cursive, messages: &TextContent, mine: mpsc::Sender<Event>, name: &str) {
     s.pop_layer();
     let name1 = name.to_string().clone();
 
     let channels = vec![
-        "Channel 1",
+        "#Channel 1",
         "Channel 2",
         "Channel 3",
         "Channel 4",
@@ -75,10 +61,9 @@ fn select_channel(s: &mut Cursive, messages: &TextContent, mine: &MChannel, name
 
     let messages_clone = messages.clone();
 
-    let m = Arc::clone(mine);
     let connect_button = Button::new("Connect", move |s| {
         let channel = *channel_selection.lock().unwrap();
-        open_chat(s, &messages_clone, &m, &name1, &channels[channel.unwrap()])
+        open_chat(s, &messages_clone, mine, &name1, &channels[channel.unwrap()])
     });
 
     let button_row = LinearLayout::horizontal()
@@ -92,8 +77,9 @@ fn select_channel(s: &mut Cursive, messages: &TextContent, mine: &MChannel, name
 
     s.add_layer(Dialog::around(layout).title("Select Channel"));
 }
+*/
 
-fn open_chat(s: &mut Cursive, messages: &TextContent, m: &MChannel, name: &str, channel: &str) {
+fn open_chat(s: &mut Cursive, messages: &TextContent, m: mpsc::Sender<Event>, name: &str, channel: &str) {
     s.pop_layer();
     let messages_clone = messages.clone();
     let name1 = name.to_string().clone();
@@ -106,8 +92,8 @@ fn open_chat(s: &mut Cursive, messages: &TextContent, m: &MChannel, name: &str, 
         .child(TextView::new("Chat:"))
         .child(chat_input);
 
-    let m1 = Arc::clone(m);
-    let m2 = Arc::clone(m);
+    let m1 = m.clone();
+    let m2 = m.clone();
     let layout = LinearLayout::vertical()
         .child(TextView::new_with_content(header))
         .child(DummyView.fixed_height(1))
@@ -123,29 +109,20 @@ fn open_chat(s: &mut Cursive, messages: &TextContent, m: &MChannel, name: &str, 
                 .call_on_name("chat", |view: &mut EditView| view.set_content(""))
                 .unwrap();
             //send message
-            m1.lock()
-                .unwrap()
-                .send
-                .send(TuiMessage::Message(name1.to_string(), message.to_string()))
-                .unwrap();
+            m1.send(Event::TuiMessage(name1.to_string(), message.to_string())).unwrap();
         }))
         .child(Button::new("Quit", move |s| {
-            m2.lock().unwrap().send.send(TuiMessage::Quit).unwrap();
+            m2.send(Event::TuiQuit).unwrap();
             s.quit();
         }));
     s.add_layer(layout);
 }
 
-pub fn start_client() -> (CursiveRunnable, TextContent, Channel<TuiMessage>) {
+pub fn start_client(mine: mpsc::Sender<Event>) -> (CursiveRunnable, TextContent) {
     let mut siv = cursive::default();
 
     let messages = TextContent::new("");
     let messages_clone = messages.clone();
-
-    let (mine, theirs) = Channel::pair();
-    let mine = Arc::new(Mutex::new(mine));
-
-    let _m = Arc::clone(&mine);
 
     let server_input = LinearLayout::horizontal()
         .child(TextView::new("Server:"))
@@ -159,7 +136,7 @@ pub fn start_client() -> (CursiveRunnable, TextContent, Channel<TuiMessage>) {
         .child(TextView::new("Channel:"))
         .child(EditView::new().with_name("irc_channel").fixed_width(20));
 
-    let m = Arc::clone(&mine);
+    let m = mine.clone();
     let login_button = Button::new("Login", move |s| {
         let server = s
             .call_on_name("server", |view: &mut EditView| view.get_content())
@@ -180,26 +157,13 @@ pub fn start_client() -> (CursiveRunnable, TextContent, Channel<TuiMessage>) {
             .child(name_input)
             .child(irc_channel_input),
     );
-    /*
-        .on_event(event::Key::Enter, move |s| {
-        let name = s
-        .call_on_name("name", |view: &mut EditView| view.get_content())
-        .unwrap();
-        let irc_channel = s
-        .call_on_name("irc_channel", |view: &mut EditView| view.get_content())
-        .unwrap();
-        check_credentials(s, &m, &name, &irc_channel)
-    use controller::connect::ConMessage;
-        });
-        */
 
-    let m = Arc::clone(&mine);
-
+    let m = mine.clone();
     let button_row = LinearLayout::horizontal()
         .child(login_button)
         .child(DummyView.fixed_width(2))
         .child(Button::new("Quit", move |s| {
-            m.lock().unwrap().send.send(TuiMessage::Quit).unwrap();
+            m.send(Event::TuiQuit).unwrap();
             s.quit();
         }));
 
@@ -216,5 +180,5 @@ pub fn start_client() -> (CursiveRunnable, TextContent, Channel<TuiMessage>) {
 
     siv.add_global_callback('q', |s| s.quit());
 
-    (siv, messages_clone, theirs)
+    (siv, messages_clone)
 }
