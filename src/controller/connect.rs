@@ -10,6 +10,16 @@ pub enum ConError {
     ArgError(),
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ConMessage {
+    Message(String),
+    Credentials(String),
+    ChanList(Vec<String>),
+    Ok,
+    Quit,
+}
+
+type MChannel = Arc<Mutex<Channel<ConMessage>>>;
 type GenericError = Box<dyn std::error::Error + Send + Sync + 'static>;
 type GenericResult<T> = Result<T, GenericError>;
 pub async fn start_client(
@@ -17,38 +27,52 @@ pub async fn start_client(
     srv: &str,
     port: u16,
     use_tls: bool,
-    channels: &[&str],
-) -> (Client, Sender) {
+    //channels: &[&str],
+    channel: &str,
+) -> (Client, Sender, Channel<ConMessage>) {
+    println!("connect::start_client() called");
+    let (mine, theirs) = Channel::pair();
+    let mine = Arc::new(Mutex::new(mine));
+    let m = Arc::clone(&mine);
     let s = |s: &str| Some(s.to_owned());
+
     let config = Config {
         nickname: s(nick),
         server: s(srv),
         port: Some(port),
         use_tls: Some(use_tls),
-        channels: channels.into_iter().map(|s| s.to_string()).collect(),
+        //channels: channels.into_iter().map(|s| s.to_string()).collect(),
+        channels: vec![channel.to_string()],
         ..Config::default()
     };
     let mut client = Client::from_config(config).await.unwrap();
     let sender = client.sender();
     //need a thread to run_stream and a thread to return client, sender
-    run_stream(&mut client);
-    (client, sender)
+    run_stream(&mut client, &m);
+    (client, sender, theirs)
 }
 
 #[tokio::main]
-pub async fn run_stream(client: &mut Client) -> () {
+pub async fn run_stream(client: &mut Client, my_channel: &MChannel) -> () {
+    println!("connect::run_stream() called");
     let mut stream = client.stream().unwrap();
     client.identify().unwrap();
+    let m1 = Arc::clone(my_channel);
     while let Some(m) = stream.next().await.transpose().unwrap() {
         //rcv messages from server and send them to tui to print to screen
         println!("{:?}", m);
-        /*let _ = match m.command {
-            Command::Response(Response::RPL_LIST, _) =>
-            //_tui::TuiMessage::Send(m.to_string()),
-            {
-                println!("{:?}", m)
+
+        let _ = match m.command {
+            Command::Response(Response::RPL_MOTD, _) => m1
+                .lock()
+                .unwrap()
+                .send
+                .send(ConMessage::Message(m.to_string()))
+                .unwrap(),
+            Command::Response(Response::RPL_WELCOME, _) => {
+                m1.lock().unwrap().send.send(ConMessage::Ok).unwrap()
             }
-        }; */
+        };
     }
 }
 
