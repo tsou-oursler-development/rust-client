@@ -8,8 +8,9 @@ edition = "2018"
 
 [dependencies]
 irc="0.15.0"
-futures = "*"
-thiserror = "*"
+futures="0.3.15"
+thiserror="1.0.25"
+async-std="1.9.0"
 
 [dependencies.async-std]
 version = "1.9"
@@ -18,3 +19,7 @@ features = ["attributes"]
 [dependencies.cursive]
 version = "0.16.3"
 features = ["crossterm-backend"]
+
+[dependencies.tokio]
+version="1.6.0"
+features=["full"]

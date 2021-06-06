@@ -29,6 +29,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Event::TuiMessage(name, message) => {
                     eprintln!("received message from {}: {}", name, message);
                     messages.append(format!("{}: {}\n", name, message));
+                    let ctlr = Arc::clone(&ctlr);
+                    controller::send(ctlr, &message);
                 }
                 Event::TuiQuit => {
                     eprintln!("quit");
@@ -37,12 +39,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 Event::TuiCredentials(name, channel, server) => {
                     eprintln!("Check credentials");
+                    /*
                     messages.append(format!(
                         "NAME: {} CHANNEL: {} SERVER: {}",
                         name,
                         channel,
                         server,
-                    ));
+                    ));*/
                     let ctlr = Arc::clone(&ctlr);
                     let event_channel = con_send.clone();
                     let _ = thread::spawn(move || {
