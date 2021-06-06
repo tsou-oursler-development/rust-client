@@ -70,7 +70,9 @@ async fn run_stream(client: ClientHandle, my_channel: mpsc::Sender<Event>) {
     }
 }
 
-pub fn send(client: &Arc<Mutex<Client>>, message: &str) -> GenericResult<()> {
+pub fn send(client: ClientHandle, message: &str) -> GenericResult<()> {
+    let mut client = client.lock().unwrap();
+    let client = client.as_mut().unwrap();
     let mut v: Vec<_> = message.split(' ').collect();
     let chan = match &v[1].starts_with("#") {
         true => {
@@ -83,7 +85,7 @@ pub fn send(client: &Arc<Mutex<Client>>, message: &str) -> GenericResult<()> {
         }
         false => "",
     };
-    let sender = client.lock().unwrap();
+    let sender = client;
     let res = match v[0] {
         "/PRIVMESSAGE" => sender.send_privmsg(chan, v.drain(1..).collect::<Vec<_>>().concat())?,
         "/JOIN" => {
