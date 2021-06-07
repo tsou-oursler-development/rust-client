@@ -18,11 +18,11 @@ pub enum Event {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (con_send, con_rcv) = mpsc::channel();
     let (mut tui, messages) = view::start_client(con_send.clone());
-    
+
     let port = 6667;
     let use_tls = false;
     let ctlr = Arc::new(Mutex::new(None));
-    
+
     let main_thread = thread::spawn(move || {
         loop {
             let message = con_rcv.recv().expect("receive channel closed");
@@ -40,22 +40,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     eprintln!("Check credentials");
                     let ctlr = Arc::clone(&ctlr);
                     let event_channel = con_send.clone();
-                    let server = "irc.freenode.net";
-                    let name = "Nottabot";
-                    let channel = "botwar";
+                    let server = "localhost";
+                    let name = "br0";
+                    let channel = "#unrealircd";
                     let _ = thread::spawn(move || {
                         let rt = tokio::runtime::Runtime::new().unwrap();
                         let client = rt.block_on(controller::create_client(
-                            name,
-                            server,
-                            port,
-                            use_tls,
-                            channel,
+                            name, server, port, use_tls, channel,
                         ));
                         let mut rcvr = ctlr.lock().unwrap();
                         *rcvr = Some(client);
                         drop(rcvr);
-                        controller::send(&ctlr, "/JOIN #botwar").unwrap();
+                        controller::send(&ctlr, "/JOIN #unrealircd").unwrap();
                         rt.block_on(controller::start_receive(ctlr, event_channel))
                     });
                 }
@@ -68,5 +64,5 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tui.run();
     main_thread.join().unwrap();
-    Ok(()) 
+    Ok(())
 }
