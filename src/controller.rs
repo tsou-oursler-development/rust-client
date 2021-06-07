@@ -4,8 +4,6 @@ use futures::prelude::*;
 use irc::client::prelude::*;
 use std::sync::{Arc, Mutex, mpsc};
 use thiserror::Error;
-use async_std::task;
-use tokio::*;
 
 #[derive(Error, Debug)]
 pub enum ConError {
@@ -41,34 +39,28 @@ pub async fn create_client(
     let temp_config = config.clone();
     println!("{:?}", temp_config);
     
-    let client = tokio::spawn(async move {
-        println!("before from_config()");
-        let temp_client = Client::from_config(config).await;
-        println!("after from_config()");
-        temp_client
+    println!("before from_config()");
+    let client = tokio::task::block_in_place(|| {
+        Client::from_config(config)
     });
+    println!("after from_config()");
 
-    let return_client = match client.await.unwrap(){
-        Ok(t) => t,
-        _ => panic!("create_client"),
-    };
-
-    return_client
+    client.await.expect("create_client")
 }
 
     
 pub fn start_receive(client: ClientHandle, event_channel: mpsc::Sender<Event>) {
-    //task::block_on( async {run_stream(client, event_channel).await } );
-    tokio::task::block_in_place(|| { run_stream(client, event_channel) });
+    tokio::task::spawn(async move { run_stream(client, event_channel).await } );
 }
 
-//#[tokio::main]
 async fn run_stream(client: ClientHandle, my_channel: mpsc::Sender<Event>) {
     eprintln!("connect::run_stream() called");
-    let mut client = client.lock().unwrap();
-    let client = client.as_mut().unwrap();
-    let mut stream = client.stream().unwrap();
-    client.identify().unwrap();
+    let mut stream = {
+        let mut client_guard = client.lock().unwrap();
+        let client_ref = client_guard.as_mut().unwrap();
+        client_ref.identify().unwrap();
+        client_ref.stream().unwrap()
+    };
     let m1 = my_channel.clone();
     while let Some(m) = stream.next().await.transpose().unwrap() {
         //rcv messages from server and send them to tui to print to screen

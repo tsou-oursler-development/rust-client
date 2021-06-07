@@ -4,7 +4,6 @@ mod view;
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use async_std::task;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
@@ -18,13 +17,12 @@ pub enum Event {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (con_send, con_rcv) = mpsc::channel();
-    //let (mut tui, messages) = view::start_client(con_send.clone());
+    let (mut tui, messages) = view::start_client(con_send.clone());
     
-    //let port = 6667;
-    //let use_tls = false;
+    let port = 6667;
+    let use_tls = false;
     let ctlr = Arc::new(Mutex::new(None));
     
-    /*
     let main_thread = thread::spawn(move || {
         loop {
             let message = con_rcv.recv().expect("receive channel closed");
@@ -75,32 +73,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-
-
-
     tui.run();
     main_thread.join().unwrap();
     Ok(()) 
-}
-*/
-    println!("before thread");
-    let ctlr = Arc::clone(&ctlr);
-    let event_channel = con_send.clone();
-    let my_thread = thread::spawn(move || {
-        println!("inside thread");
-        let client = controller::create_client(
-           "lily",
-           "localhost",
-            6667,
-            false,
-            "#LilyChannel",
-        );
-        let mut rcvr = ctlr.lock().unwrap();
-        *rcvr = Some(client);
-        drop(rcvr);
-        controller::start_receive(ctlr, event_channel);
-    });
-
-    my_thread.join();
-    Ok(())
 }
