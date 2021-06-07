@@ -36,23 +36,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     // TODO: shut down client and tui.
                     break;
                 }
-                Event::TuiCredentials(name, channel, server) => {
+                Event::TuiCredentials(_name, _channel, _server) => {
                     eprintln!("Check credentials");
                     let ctlr = Arc::clone(&ctlr);
                     let event_channel = con_send.clone();
+                    let server = "irc.freenode.net";
+                    let name = "Nottabot";
+                    let channel = "botwar";
                     let _ = thread::spawn(move || {
-                        let client = controller::create_client(
-                            &name,
-                            &server,
+                        let rt = tokio::runtime::Runtime::new().unwrap();
+                        let client = rt.block_on(controller::create_client(
+                            name,
+                            server,
                             port,
                             use_tls,
-                            &channel,
-                        );
+                            channel,
+                        ));
                         let mut rcvr = ctlr.lock().unwrap();
                         *rcvr = Some(client);
                         drop(rcvr);
                         controller::send(&ctlr, "/JOIN #botwar").unwrap();
-                        controller::start_receive(ctlr, event_channel)
+                        rt.block_on(controller::start_receive(ctlr, event_channel))
                     });
                 }
                 _ => {

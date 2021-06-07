@@ -15,7 +15,6 @@ pub type ClientHandle = Arc<Mutex<Option<Client>>>;
 type GenericError = Box<dyn std::error::Error + Send + Sync + 'static>;
 type GenericResult<T> = Result<T, GenericError>;
 
-#[tokio::main]
 pub async fn create_client(
     nick: &str,
     srv: &str,
@@ -48,12 +47,7 @@ pub async fn create_client(
 }
 
     
-pub fn start_receive(client: ClientHandle, event_channel: mpsc::Sender<Event>) {
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    rt.block_on(async move { run_stream(client, event_channel).await } );
-}
-
-async fn run_stream(client: ClientHandle, my_channel: mpsc::Sender<Event>) {
+pub async fn start_receive(client: ClientHandle, my_channel: mpsc::Sender<Event>) {
     eprintln!("connect::run_stream() called");
     let mut stream = {
         let mut client_guard = client.lock().unwrap();
