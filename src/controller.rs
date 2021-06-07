@@ -1,10 +1,11 @@
 use crate::*;
-
+use tokio_compat_02::FutureExt;
 use futures::prelude::*;
 use irc::client::prelude::*;
 use std::sync::{Arc, Mutex, mpsc};
 use thiserror::Error;
 use async_std::task;
+use tokio::*;
 
 #[derive(Error, Debug)]
 pub enum ConError {
@@ -17,15 +18,17 @@ pub type ClientHandle = Arc<Mutex<Option<Client>>>;
 type GenericError = Box<dyn std::error::Error + Send + Sync + 'static>;
 type GenericResult<T> = Result<T, GenericError>;
 
-pub fn create_client(
+#[tokio::main]
+pub async fn create_client(
     nick: &str,
     srv: &str,
     port: u16,
     use_tls: bool,
     channel: &str,
-) -> Client {
-    println!("connect::start_client() called");
+) ->  Client {
+    eprintln!("connect::create_client() called");
     let s = |s: &str| Some(s.to_owned());
+    let client: ClientHandle = Arc::new(Mutex::new(None));
 
     let config = Config {
         nickname: s(nick),
@@ -35,15 +38,34 @@ pub fn create_client(
         channels: vec![channel.to_string()],
         ..Config::default()
     };
-    task::block_on( async {
-        Client::from_config(config).await
-    }).expect("credential fail")
+    let client = tokio::spawn(async move {
+        println!("connect::create_client() spawned");
+        let temp_client = Client::from_config(config).await;
+      
+        //let mut set_client = client.lock().unwrap();
+        //*set_client = Some(temp_client.unwrap());
+        //drop(set_client);
+    
+        temp_client
+        
+    });
+    
+    let client = match client.await.unwrap(){
+       Ok(t) => t,
+       _ => panic!("create_client"),
+    };
+
+    client
+    
 }
 
+    
 pub fn start_receive(client: ClientHandle, event_channel: mpsc::Sender<Event>) {
-    task::block_on(async { run_stream(client, event_channel).await });
+    //task::block_in_place( async {run_stream(client, event_channel).compat().await } );
+    tokio::task::block_in_place(|| { run_stream(client, event_channel) });
 }
 
+//#[tokio::main]
 async fn run_stream(client: ClientHandle, my_channel: mpsc::Sender<Event>) {
     eprintln!("connect::run_stream() called");
     let mut client = client.lock().unwrap();
