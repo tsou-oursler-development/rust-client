@@ -12,7 +12,7 @@ pub enum Event {
     TuiQuit,
     IrcMotd(String),
     IrcWelcome,
-    IrcMessage(String),
+    IrcMessage(String, String),
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -29,7 +29,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             match message {
                 Event::TuiMessage(name, message) => {
                     eprintln!("received message from {}: {}", name, message);
-                    messages.append(format!("{}: {}\n", name, message));
+                    messages.append(format!("{}: {}\n", &name, &message));
+                    controller::send(&ctlr, &message);     
                 }
                 Event::TuiQuit => {
                     eprintln!("quit");
@@ -41,7 +42,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let ctlr = Arc::clone(&ctlr);
                     let event_channel = con_send.clone();
                     let server = "localhost";
-                    let name = "br0";
+                    let name = "lily";
                     let channel = "#unrealircd";
                     let _ = thread::spawn(move || {
                         let rt = tokio::runtime::Runtime::new().unwrap();
