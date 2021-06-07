@@ -93,12 +93,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
            "localhost.me",
             6667,
             false,
-            "#channel",
+            "#LilyChannel",
         );
         let mut rcvr = ctlr.lock().unwrap();
         *rcvr = Some(client);
         drop(rcvr);
-        controller::start_receive(ctlr, event_channel)
+        controller::start_receive(ctlr, event_channel);
     });
 
     my_thread.join();

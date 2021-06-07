@@ -1,5 +1,5 @@
 use crate::*;
-use tokio_compat_02::FutureExt;
+//use tokio_compat_02::FutureExt;
 use futures::prelude::*;
 use irc::client::prelude::*;
 use std::sync::{Arc, Mutex, mpsc};
@@ -28,7 +28,6 @@ pub async fn create_client(
 ) ->  Client {
     eprintln!("connect::create_client() called");
     let s = |s: &str| Some(s.to_owned());
-    let client: ClientHandle = Arc::new(Mutex::new(None));
 
     let config = Config {
         nickname: s(nick),
@@ -38,30 +37,28 @@ pub async fn create_client(
         channels: vec![channel.to_string()],
         ..Config::default()
     };
+
+    let temp_config = config.clone();
+    println!("{:?}", temp_config);
+    
     let client = tokio::spawn(async move {
-        println!("connect::create_client() spawned");
+        println!("before from_config()");
         let temp_client = Client::from_config(config).await;
-      
-        //let mut set_client = client.lock().unwrap();
-        //*set_client = Some(temp_client.unwrap());
-        //drop(set_client);
-    
+        println!("after from_config()");
         temp_client
-        
     });
-    
-    let client = match client.await.unwrap(){
-       Ok(t) => t,
-       _ => panic!("create_client"),
+
+    let return_client = match client.await.unwrap(){
+        Ok(t) => t,
+        _ => panic!("create_client"),
     };
 
-    client
-    
+    return_client
 }
 
     
 pub fn start_receive(client: ClientHandle, event_channel: mpsc::Sender<Event>) {
-    //task::block_in_place( async {run_stream(client, event_channel).compat().await } );
+    //task::block_on( async {run_stream(client, event_channel).await } );
     tokio::task::block_in_place(|| { run_stream(client, event_channel) });
 }
 
