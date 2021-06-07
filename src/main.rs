@@ -90,7 +90,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("inside thread");
         let client = controller::create_client(
            "lily",
-           "localhost.me",
+           "localhost",
             6667,
             false,
             "#LilyChannel",
