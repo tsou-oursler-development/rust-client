@@ -1,5 +1,4 @@
 use crate::*;
-//use tokio_compat_02::FutureExt;
 use futures::prelude::*;
 use irc::client::prelude::*;
 use std::sync::{Arc, Mutex, mpsc};
@@ -37,20 +36,21 @@ pub async fn create_client(
     };
 
     let temp_config = config.clone();
-    println!("{:?}", temp_config);
+    eprintln!("{:?}", temp_config);
     
-    println!("before from_config()");
+    eprintln!("before from_config()");
     let client = tokio::task::block_in_place(|| {
         Client::from_config(config)
     });
-    println!("after from_config()");
+    eprintln!("after from_config()");
 
     client.await.expect("create_client")
 }
 
     
 pub fn start_receive(client: ClientHandle, event_channel: mpsc::Sender<Event>) {
-    tokio::task::spawn(async move { run_stream(client, event_channel).await } );
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async move { run_stream(client, event_channel).await } );
 }
 
 async fn run_stream(client: ClientHandle, my_channel: mpsc::Sender<Event>) {
@@ -81,41 +81,43 @@ async fn run_stream(client: ClientHandle, my_channel: mpsc::Sender<Event>) {
     }
 }
 
-pub fn send(client: ClientHandle, message: &str) -> GenericResult<()> {
+pub fn send(client: &ClientHandle, message: &str) -> GenericResult<()> {
     let mut client = client.lock().unwrap();
     let client = client.as_mut().unwrap();
     let mut v: Vec<_> = message.split(' ').collect();
-    let chan = match &v[1].starts_with("#") {
-        true => {
+    let chan = if v.len() > 1 {
+        if v[1].starts_with("#") {
             let check = v.remove(1);
             if check.is_channel_name() {
                 check
             } else {
                 ""
             }
+        } else {
+            ""
         }
-        false => "",
+    } else {
+        ""
     };
-    let sender = client;
     let res = match v[0] {
-        "/PRIVMESSAGE" => sender.send_privmsg(chan, v.drain(1..).collect::<Vec<_>>().concat())?,
+        "/PRIVMESSAGE" => client.send_privmsg(chan, v.drain(1..).collect::<Vec<_>>().concat())?,
         "/JOIN" => {
             if v.len() == 1 {
-                sender.send_join(chan)?
+                client.send_join(chan)?
             } else {
-                sender.send_join(v.drain(1..).collect::<Vec<_>>().join(","))?
+                client.send_join(v.drain(1..).collect::<Vec<_>>().join(","))?
             }
         }
-        "/INVITE" => sender.send_invite(chan, v.remove(1))?,
-        "/TOPIC" => sender.send_topic(chan, v.remove(1))?,
+        "/INVITE" => client.send_invite(chan, v.remove(1))?,
+        "/TOPIC" => client.send_topic(chan, v.remove(1))?,
         "/PART" => {
             if v.len() == 1 {
-                sender.send_part(chan)?
+                client.send_part(chan)?
             } else {
-                sender.send_part(v.drain(1..).collect::<Vec<_>>().concat())?
+                client.send_part(v.drain(1..).collect::<Vec<_>>().concat())?
             }
         }
-        "/Quit" => sender.send_quit(v.drain(1..).collect::<Vec<_>>().concat())?,
+        "/Quit" => client.send_quit(v.drain(1..).collect::<Vec<_>>().concat())?,
         _ => return Err(GenericError::from(ConError::ArgError())),
     };
     Ok(res)
