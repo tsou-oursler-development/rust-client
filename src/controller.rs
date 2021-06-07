@@ -1,7 +1,7 @@
 use crate::*;
 use futures::prelude::*;
 use irc::client::prelude::*;
-use std::sync::{Arc, Mutex, mpsc};
+use std::sync::{mpsc, Arc, Mutex};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -21,7 +21,7 @@ pub async fn create_client(
     port: u16,
     use_tls: bool,
     channel: &str,
-) ->  Client {
+) -> Client {
     eprintln!("connect::create_client() called");
     let s = |s: &str| Some(s.to_owned());
 
@@ -36,17 +36,14 @@ pub async fn create_client(
 
     let temp_config = config.clone();
     eprintln!("{:?}", temp_config);
-    
+
     eprintln!("before from_config()");
-    let client = tokio::task::block_in_place(|| {
-        Client::from_config(config)
-    });
+    let client = tokio::task::block_in_place(|| Client::from_config(config));
     eprintln!("after from_config()");
 
     client.await.expect("create_client")
 }
 
-    
 pub async fn start_receive(client: ClientHandle, my_channel: mpsc::Sender<Event>) {
     eprintln!("connect::run_stream() called");
     let mut stream = {
@@ -61,7 +58,7 @@ pub async fn start_receive(client: ClientHandle, my_channel: mpsc::Sender<Event>
         eprintln!("{:?}", m);
 
         let _ = match m.command {
-            Command::Response(Response::RPL_MOTD, _) => {
+            /* Command::Response(Response::RPL_MOTD, _) => {
                 m1.send(Event::IrcMotd(m.to_string())).unwrap()
             }
             Command::Response(Response::RPL_WELCOME, _) => {
@@ -70,7 +67,18 @@ pub async fn start_receive(client: ClientHandle, my_channel: mpsc::Sender<Event>
             Command::Response(Response::RPL_NONE, _) => {
                 m1.send(Event::IrcMessage(m.to_string())).unwrap()
             },
-            _ => eprintln!("unknown message from IRC: {}", m.to_string()),
+            _ => eprintln!("unknown message from IRC: {}", m.to_string()),*/
+            _ => {
+                println!("hello");
+                match m.source_nickname() {
+                    Some(inner) => m1
+                        .send(Event::TuiMessage(inner.to_string(), m.to_string()))
+                        .unwrap(),
+                    None => m1
+                        .send(Event::TuiMessage("".to_string(), m.to_string()))
+                        .unwrap(),
+                };
+            }
         };
     }
 }
