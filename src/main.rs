@@ -4,7 +4,6 @@ mod view;
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use async_std::task;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
@@ -18,13 +17,12 @@ pub enum Event {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (con_send, con_rcv) = mpsc::channel();
-    //let (mut tui, messages) = view::start_client(con_send.clone());
+    let (mut tui, messages) = view::start_client(con_send.clone());
     
-    //let port = 6667;
-    //let use_tls = false;
+    let port = 6667;
+    let use_tls = false;
     let ctlr = Arc::new(Mutex::new(None));
     
-    /*
     let main_thread = thread::spawn(move || {
         loop {
             let message = con_rcv.recv().expect("receive channel closed");
@@ -32,40 +30,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Event::TuiMessage(name, message) => {
                     eprintln!("received message from {}: {}", name, message);
                     messages.append(format!("{}: {}\n", name, message));
-                    //let ctlr = Arc::clone(&ctlr);
-                    //controller::send(ctlr, &message);
                 }
                 Event::TuiQuit => {
                     eprintln!("quit");
                     // TODO: shut down client and tui.
                     break;
                 }
-                Event::TuiCredentials(name, channel, server) => {
+                Event::TuiCredentials(_name, _channel, _server) => {
                     eprintln!("Check credentials");
-                    /*
-                    messages.append(format!(
-                        "NAME: {} CHANNEL: {} SERVER: {}",
-                        name,
-                        channel,
-                        server,
-                    ));
-                    */
                     let ctlr = Arc::clone(&ctlr);
                     let event_channel = con_send.clone();
+                    let server = "irc.freenode.net";
+                    let name = "Nottabot";
+                    let channel = "botwar";
                     let _ = thread::spawn(move || {
-                        let client = controller::create_client(
-                            &name,
-                            &server,
+                        let rt = tokio::runtime::Runtime::new().unwrap();
+                        let client = rt.block_on(controller::create_client(
+                            name,
+                            server,
                             port,
                             use_tls,
-                            &channel,
-                        );
+                            channel,
+                        ));
                         let mut rcvr = ctlr.lock().unwrap();
                         *rcvr = Some(client);
                         drop(rcvr);
-                        //let client = client.identify();
-                        //messages.append(format!("{:?}", &client));
-                        controller::start_receive(ctlr, event_channel)
+                        controller::send(&ctlr, "/JOIN #botwar").unwrap();
+                        rt.block_on(controller::start_receive(ctlr, event_channel))
                     });
                 }
                 _ => {
@@ -75,32 +66,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-
-
-
     tui.run();
     main_thread.join().unwrap();
     Ok(()) 
-}
-*/
-    println!("before thread");
-    let ctlr = Arc::clone(&ctlr);
-    let event_channel = con_send.clone();
-    let my_thread = thread::spawn(move || {
-        println!("inside thread");
-        let client = controller::create_client(
-           "lily",
-           "localhost",
-            6667,
-            false,
-            "#LilyChannel",
-        );
-        let mut rcvr = ctlr.lock().unwrap();
-        *rcvr = Some(client);
-        drop(rcvr);
-        controller::start_receive(ctlr, event_channel);
-    });
-
-    my_thread.join();
-    Ok(())
 }
