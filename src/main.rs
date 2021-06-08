@@ -29,6 +29,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             match message {
                 Event::TuiMessage(name, message) => {
                     eprintln!("received message from {}: {}", name, message);
+                    format!("\\PRIVMESSAGE {}", message);
                     messages.append(format!("{}: {}\n", &name, &message));
                     controller::send(&ctlr, &message).unwrap();
                 }
