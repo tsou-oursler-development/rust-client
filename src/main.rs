@@ -30,7 +30,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Event::TuiMessage(name, message) => {
                     eprintln!("received message from {}: {}", name, message);
                     messages.append(format!("{}: {}\n", &name, &message));
-                    controller::send(&ctlr, &message);     
+                    controller::send(&ctlr, &message).unwrap();
                 }
                 Event::TuiQuit => {
                     eprintln!("quit");
