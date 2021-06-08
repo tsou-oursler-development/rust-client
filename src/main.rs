@@ -28,31 +28,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let message = con_rcv.recv().expect("receive channel closed");
             match message {
                 Event::TuiMessage(name, message) => {
-                    eprintln!("received message from {}: {}", name, message);
                     messages.append(format!("{}: {}\n", &name, &message));
-                    controller::send(&ctlr, &message);     
+                    controller::send(&ctlr, &message);
                 }
                 Event::TuiQuit => {
-                    eprintln!("quit");
                     // TODO: shut down client and tui.
                     break;
                 }
-                Event::TuiCredentials(_name, _channel, _server) => {
-                    eprintln!("Check credentials");
+                Event::TuiCredentials(name, channel, server) => {
                     let ctlr = Arc::clone(&ctlr);
                     let event_channel = con_send.clone();
-                    let server = "localhost";
-                    let name = "lily";
-                    let channel = "#unrealircd";
                     let _ = thread::spawn(move || {
                         let rt = tokio::runtime::Runtime::new().unwrap();
                         let client = rt.block_on(controller::create_client(
-                            name, server, port, use_tls, channel,
+                            &name, &server, port, use_tls, &channel,
                         ));
                         let mut rcvr = ctlr.lock().unwrap();
                         *rcvr = Some(client);
                         drop(rcvr);
-                        controller::send(&ctlr, "/JOIN #unrealircd").unwrap();
+                        let join_channel = format!("/JOIN {}", &channel);
+                        controller::send(&ctlr, &join_channel).unwrap();
                         rt.block_on(controller::start_receive(ctlr, event_channel))
                     });
                 }

@@ -1,13 +1,13 @@
 use crate::*;
 
-use std::sync::mpsc;
+use std::{sync::mpsc, time, thread};
 
 use cursive::traits::*;
 use cursive::views::{
-    Button, Dialog, DummyView, EditView, LinearLayout, OnEventView, TextContent,
-    TextView,
+    Button, Dialog, DummyView, EditView, LinearLayout, OnEventView, Panel, ScrollView, TextContent,
+    TextView, BoxView, NamedView,
 };
-use cursive::{Cursive, CursiveRunnable};
+use cursive::{Cursive, CursiveRunnable, Vec2};
 
 fn check_credentials(
     s: &mut Cursive,
@@ -22,17 +22,16 @@ fn check_credentials(
     let messages_clone = messages.clone();
 
     let layout = LinearLayout::vertical().child(TextView::new_with_content(messages_clone));
-
-    s.add_layer(Dialog::around(layout).title("Login info for debugging (this screen is created in check_credentials() and appended to in main()): "));
-
+    
     let m = mine.clone();
-    m
-        .send(Event::TuiCredentials(
-            name.to_owned(),
-            irc_channel.to_owned(),
-            server.to_owned(),
-        ))
-        .unwrap();
+    m.send(Event::TuiCredentials(
+        name.to_owned(),
+        irc_channel.to_owned(),
+        server.to_owned(),
+    ))
+    .unwrap();
+    let time = time::Duration::from_millis(1000);
+    thread::sleep(time);
     open_chat(s, messages, m, name, irc_channel);
 }
 
@@ -79,12 +78,20 @@ fn select_channel(s: &mut Cursive, messages: &TextContent, mine: mpsc::Sender<Ev
 }
 */
 
-fn open_chat(s: &mut Cursive, messages: &TextContent, m: mpsc::Sender<Event>, name: &str, channel: &str) {
-    s.pop_layer();
+pub fn open_chat(
+    s: &mut Cursive,
+    messages: &TextContent,
+    m: mpsc::Sender<Event>,
+    name: &str,
+    channel: &str,
+) {
     let messages_clone = messages.clone();
     let name1 = name.to_string().clone();
 
-    let chat_input = EditView::new().with_name("chat").fixed_width(24);
+    let chat_content =
+        ScrollView::new(LinearLayout::vertical().child(TextView::new_with_content(messages_clone)));
+    
+    let chat_input = EditView::new().with_name("chat").min_width(80);
 
     let header = TextContent::new("Connected to ".to_string() + channel);
 
@@ -94,12 +101,8 @@ fn open_chat(s: &mut Cursive, messages: &TextContent, m: mpsc::Sender<Event>, na
 
     let m1 = m.clone();
     let m2 = m.clone();
-    let layout = LinearLayout::vertical()
-        .child(TextView::new_with_content(header))
-        .child(DummyView.fixed_height(1))
-        .child(TextView::new_with_content(messages_clone))
-        .child(chat_wrapper)
-        .child(Button::new("Send", move |s| {
+    
+    let send_button = Button::new("Send", move |s| {
             //get message
             let message = s
                 .call_on_name("chat", |view: &mut EditView| view.get_content())
@@ -109,13 +112,29 @@ fn open_chat(s: &mut Cursive, messages: &TextContent, m: mpsc::Sender<Event>, na
                 .call_on_name("chat", |view: &mut EditView| view.set_content(""))
                 .unwrap();
             //send message
-            m1.send(Event::TuiMessage(name1.to_string(), message.to_string())).unwrap();
-        }))
-        .child(Button::new("Quit", move |s| {
+            m1.send(Event::TuiMessage(name1.to_string(), message.to_string()))
+                .unwrap();
+        });
+
+    let quit_button = Button::new("Quit", move |s| {
             m2.send(Event::TuiQuit).unwrap();
-            s.quit();
-        }));
-    s.add_layer(layout);
+            s.quit()});
+
+    let button_row = LinearLayout::horizontal()
+        .child(send_button)
+        .child(DummyView.fixed_width(2))
+        .child(quit_button);
+
+    let layout = LinearLayout::vertical()
+        .child(TextView::new_with_content(header))
+        .child(DummyView.fixed_height(1))
+        .child(chat_content)
+        .child(chat_wrapper)
+        .child(button_row);
+
+    let chat_window = BoxView::with_max_height(80, layout);
+
+    s.add_layer(Dialog::around(Panel::new(chat_window)));
 }
 
 pub fn start_client(mine: mpsc::Sender<Event>) -> (CursiveRunnable, TextContent) {
@@ -167,16 +186,16 @@ pub fn start_client(mine: mpsc::Sender<Event>) -> (CursiveRunnable, TextContent)
             s.quit();
         }));
 
-    siv.add_layer(
-        Dialog::around(
+    let layout = Dialog::around(
             LinearLayout::vertical()
                 .child(DummyView.fixed_height(1))
                 .child(login_wrapper)
                 .child(DummyView.fixed_height(1))
                 .child(button_row),
         )
-        .title("Login"),
-    );
+        .title("Login");
+
+    siv.add_layer(layout);
 
     siv.add_global_callback('q', |s| s.quit());
 
