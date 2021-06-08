@@ -89,10 +89,6 @@ pub fn open_chat(
     let messages_clone = messages.clone();
     let name1 = name.to_string().clone();
 
-    //let chat_content =
-      //          ScrollView::new(messaruges_clone).scroll_strategy(ScrollStrategy::StickToBottom);
- 
-
     let chat_input = EditView::new().with_name("chat").min_width(80);
 
     let header = TextContent::new("Connected to ".to_string() + channel);
@@ -105,15 +101,12 @@ pub fn open_chat(
     let m2 = m.clone();
     
     let send_button = Button::new("Send", move |s| {
-            //get message
             let message = s
                 .call_on_name("chat", |view: &mut EditView| view.get_content())
                 .unwrap();
-            //clear input
             let _ = s
                 .call_on_name("chat", |view: &mut EditView| view.set_content(""))
                 .unwrap();
-            //send message
             m1.send(Event::TuiMessage(name1.to_string(), message.to_string()))
                 .unwrap();
         });
@@ -128,19 +121,21 @@ pub fn open_chat(
         .child(quit_button);
 
     let chat_layout = LinearLayout::vertical()
-        .child(TextView::new_with_content(header))
-        .child(DummyView.fixed_height(1))
         .child(TextView::new_with_content(messages_clone))        
+        .child(chat_wrapper)
         .scrollable().scroll_strategy(ScrollStrategy::StickToBottom);
 
     let layout = LinearLayout::vertical()
+        .child(TextView::new_with_content(header))
+        .child(DummyView.fixed_height(1))
         .child(chat_layout)
-        .child(chat_wrapper)
         .child(button_row);
 
-    let chat_window = BoxView::with_max_height(80, layout);
+    let chat_window = BoxView::with_max_height(50, layout);
 
     s.add_layer(Dialog::around(Panel::new(chat_window)));
+
+    s.set_fps(1);
 }
 
 pub fn start_client(mine: mpsc::Sender<Event>) -> (CursiveRunnable, TextContent) {
