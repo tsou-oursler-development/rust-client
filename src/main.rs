@@ -27,10 +27,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         loop {
             let message = con_rcv.recv().expect("receive channel closed");
             match message {
-                Event::TuiMessage(name, message) => {
-                    format!("\\PRIVMESSAGE {}", message);
+                Event::IrcMessage(name, message) => {
                     messages.append(format!("{}: {}\n", &name, &message));
-                    controller::send(&ctlr, &message).unwrap();
+                }
+                Event::TuiMessage(name, message) => {
+                    let send_message = format!("/PRIVMESSAGE {}", &message);
+                    messages.append(format!("{}: {}\n", &name, &message));
+                    controller::send(&ctlr, &send_message).unwrap();
+                    // controller::send(&ctlr, &message).unwrap();
                 }
                 Event::TuiQuit => {
                     // TODO: shut down client and tui.
@@ -39,6 +43,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Event::TuiCredentials(name, channel, server) => {
                     let ctlr = Arc::clone(&ctlr);
                     let event_channel = con_send.clone();
+                    messages.append(format!("{}: {}, {}\n", &name, &channel, &server));
                     let _ = thread::spawn(move || {
                         let rt = tokio::runtime::Runtime::new().unwrap();
                         let client = rt.block_on(controller::create_client(
