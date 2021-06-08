@@ -7,6 +7,7 @@ use cursive::views::{
     Button, Dialog, DummyView, EditView, LinearLayout, OnEventView, Panel, ScrollView, TextContent,
     TextView, BoxView, NamedView,
 };
+use cursive::view::*;
 use cursive::{Cursive, CursiveRunnable, Vec2};
 
 fn check_credentials(
@@ -88,9 +89,10 @@ pub fn open_chat(
     let messages_clone = messages.clone();
     let name1 = name.to_string().clone();
 
-    let chat_content =
-        ScrollView::new(LinearLayout::vertical().child(TextView::new_with_content(messages_clone)));
-    
+    //let chat_content =
+      //          ScrollView::new(messaruges_clone).scroll_strategy(ScrollStrategy::StickToBottom);
+ 
+
     let chat_input = EditView::new().with_name("chat").min_width(80);
 
     let header = TextContent::new("Connected to ".to_string() + channel);
@@ -125,10 +127,14 @@ pub fn open_chat(
         .child(DummyView.fixed_width(2))
         .child(quit_button);
 
-    let layout = LinearLayout::vertical()
+    let chat_layout = LinearLayout::vertical()
         .child(TextView::new_with_content(header))
         .child(DummyView.fixed_height(1))
-        .child(chat_content)
+        .child(TextView::new_with_content(messages_clone))        
+        .scrollable().scroll_strategy(ScrollStrategy::StickToBottom);
+
+    let layout = LinearLayout::vertical()
+        .child(chat_layout)
         .child(chat_wrapper)
         .child(button_row);
 
