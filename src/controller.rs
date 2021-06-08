@@ -22,7 +22,7 @@ pub async fn create_client(
     use_tls: bool,
     channel: &str,
 ) -> Client {
-    eprintln!("connect::create_client() called");
+    //eprintln!("connect::create_client() called");
     let s = |s: &str| Some(s.to_owned());
 
     let config = Config {
@@ -35,17 +35,17 @@ pub async fn create_client(
     };
 
     let temp_config = config.clone();
-    eprintln!("{:?}", temp_config);
+    //eprintln!("{:?}", temp_config);
 
-    eprintln!("before from_config()");
+    //eprintln!("before from_config()");
     let client = tokio::task::block_in_place(|| Client::from_config(config));
-    eprintln!("after from_config()");
+    //eprintln!("after from_config()");
 
     client.await.expect("create_client")
 }
 
 pub async fn start_receive(client: ClientHandle, my_channel: mpsc::Sender<Event>) {
-    eprintln!("connect::run_stream() called");
+    //eprintln!("connect::run_stream() called");
     let mut stream = {
         let mut client_guard = client.lock().unwrap();
         let client_ref = client_guard.as_mut().unwrap();
@@ -55,7 +55,7 @@ pub async fn start_receive(client: ClientHandle, my_channel: mpsc::Sender<Event>
     let m1 = my_channel.clone();
     while let Some(m) = stream.next().await.transpose().unwrap() {
         //rcv messages from server and send them to tui to print to screen
-        eprintln!("{:?}", m);
+        //eprintln!("{:?}", m);
 
         let _ = match m.command {
             /* Command::Response(Response::RPL_MOTD, _) => {
@@ -69,7 +69,7 @@ pub async fn start_receive(client: ClientHandle, my_channel: mpsc::Sender<Event>
             },
             _ => eprintln!("unknown message from IRC: {}", m.to_string()),*/
             _ => {
-                println!("hello");
+                //println!("hello");
                 match m.source_nickname() {
                     Some(inner) => m1
                         .send(Event::TuiMessage(inner.to_string(), m.to_string()))
