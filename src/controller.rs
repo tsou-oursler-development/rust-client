@@ -34,7 +34,7 @@ pub async fn create_client(
         ..Config::default()
     };
 
-    let temp_config = config.clone();
+    //let temp_config = config.clone();
     //eprintln!("{:?}", temp_config);
 
     //eprintln!("before from_config()");
@@ -72,10 +72,10 @@ pub async fn start_receive(client: ClientHandle, my_channel: mpsc::Sender<Event>
                 //println!("hello");
                 match m.source_nickname() {
                     Some(inner) => m1
-                        .send(Event::TuiMessage(inner.to_string(), m.to_string()))
+                        .send(Event::IrcMessage(inner.to_string(), m.to_string()))
                         .unwrap(),
                     None => m1
-                        .send(Event::TuiMessage("".to_string(), m.to_string()))
+                        .send(Event::IrcMessage("".to_string(), m.to_string()))
                         .unwrap(),
                 };
             }
