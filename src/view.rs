@@ -1,6 +1,6 @@
 use crate::*;
 
-use std::sync::mpsc;
+use std::{sync::mpsc, time, thread};
 
 use cursive::traits::*;
 use cursive::views::{
@@ -17,7 +17,6 @@ fn check_credentials(
     name: &str,
     irc_channel: &str,
 ) {
-    let size = s.screen_size();
     s.pop_layer();
 
     let messages_clone = messages.clone();
@@ -31,7 +30,9 @@ fn check_credentials(
         server.to_owned(),
     ))
     .unwrap();
-    open_chat(s, messages, m, name, irc_channel, size);
+    let time = time::Duration::from_millis(1000);
+    thread::sleep(time);
+    open_chat(s, messages, m, name, irc_channel);
 }
 
 /*
@@ -77,13 +78,12 @@ fn select_channel(s: &mut Cursive, messages: &TextContent, mine: mpsc::Sender<Ev
 }
 */
 
-fn open_chat(
+pub fn open_chat(
     s: &mut Cursive,
     messages: &TextContent,
     m: mpsc::Sender<Event>,
     name: &str,
     channel: &str,
-    size: Vec2,
 ) {
     let messages_clone = messages.clone();
     let name1 = name.to_string().clone();
