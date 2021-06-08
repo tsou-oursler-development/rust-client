@@ -28,17 +28,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let message = con_rcv.recv().expect("receive channel closed");
             match message {
                 Event::TuiMessage(name, message) => {
-                    eprintln!("received message from {}: {}", name, message);
                     messages.append(format!("{}: {}\n", &name, &message));
-                    controller::send(&ctlr, &message);     
+                    controller::send(&ctlr, &message);
                 }
                 Event::TuiQuit => {
-                    eprintln!("quit");
                     // TODO: shut down client and tui.
                     break;
                 }
                 Event::TuiCredentials(name, channel, server) => {
-                    eprintln!("Check credentials");
                     let ctlr = Arc::clone(&ctlr);
                     let event_channel = con_send.clone();
                     let _ = thread::spawn(move || {

@@ -4,7 +4,7 @@ use std::sync::mpsc;
 
 use cursive::traits::*;
 use cursive::views::{
-    Button, Dialog, DummyView, EditView, LinearLayout, OnEventView, TextContent,
+    Button, Dialog, DummyView, EditView, LinearLayout, OnEventView, Panel, ScrollView, TextContent,
     TextView,
 };
 use cursive::{Cursive, CursiveRunnable};
@@ -26,13 +26,12 @@ fn check_credentials(
     s.add_layer(Dialog::around(layout).title("Login info for debugging (this screen is created in check_credentials() and appended to in main()): "));
 
     let m = mine.clone();
-    m
-        .send(Event::TuiCredentials(
-            name.to_owned(),
-            irc_channel.to_owned(),
-            server.to_owned(),
-        ))
-        .unwrap();
+    m.send(Event::TuiCredentials(
+        name.to_owned(),
+        irc_channel.to_owned(),
+        server.to_owned(),
+    ))
+    .unwrap();
     open_chat(s, messages, m, name, irc_channel);
 }
 
@@ -79,10 +78,19 @@ fn select_channel(s: &mut Cursive, messages: &TextContent, mine: mpsc::Sender<Ev
 }
 */
 
-fn open_chat(s: &mut Cursive, messages: &TextContent, m: mpsc::Sender<Event>, name: &str, channel: &str) {
+fn open_chat(
+    s: &mut Cursive,
+    messages: &TextContent,
+    m: mpsc::Sender<Event>,
+    name: &str,
+    channel: &str,
+) {
     s.pop_layer();
     let messages_clone = messages.clone();
     let name1 = name.to_string().clone();
+
+    let chat_content =
+        ScrollView::new(LinearLayout::vertical().child(TextView::new_with_content(messages_clone)));
 
     let chat_input = EditView::new().with_name("chat").fixed_width(24);
 
@@ -97,7 +105,7 @@ fn open_chat(s: &mut Cursive, messages: &TextContent, m: mpsc::Sender<Event>, na
     let layout = LinearLayout::vertical()
         .child(TextView::new_with_content(header))
         .child(DummyView.fixed_height(1))
-        .child(TextView::new_with_content(messages_clone))
+        .child(chat_content)
         .child(chat_wrapper)
         .child(Button::new("Send", move |s| {
             //get message
@@ -109,13 +117,14 @@ fn open_chat(s: &mut Cursive, messages: &TextContent, m: mpsc::Sender<Event>, na
                 .call_on_name("chat", |view: &mut EditView| view.set_content(""))
                 .unwrap();
             //send message
-            m1.send(Event::TuiMessage(name1.to_string(), message.to_string())).unwrap();
+            m1.send(Event::TuiMessage(name1.to_string(), message.to_string()))
+                .unwrap();
         }))
         .child(Button::new("Quit", move |s| {
             m2.send(Event::TuiQuit).unwrap();
             s.quit();
         }));
-    s.add_layer(layout);
+    s.add_fullscreen_layer(Dialog::around(Panel::new(layout)));
 }
 
 pub fn start_client(mine: mpsc::Sender<Event>) -> (CursiveRunnable, TextContent) {
