@@ -29,7 +29,7 @@ pub fn check_credentials(
     irc_channel: &str,
 ) -> Result<()> {
     s.pop_layer();
-    
+
     if irc_channel.chars().nth(0).unwrap() != '#' {
         return Err(TuiError::ChannelError());
     }
@@ -44,7 +44,7 @@ pub fn check_credentials(
     let time = time::Duration::from_millis(1000);
     thread::sleep(time);
     open_chat(s, messages, m, name, irc_channel);
-    
+
     Ok(())
 }
 
@@ -180,12 +180,15 @@ pub fn start_client(mine: mpsc::Sender<Event>) -> (CursiveRunnable, TextContent)
         let irc_channel = s
             .call_on_name("irc_channel", |view: &mut EditView| view.get_content())
             .unwrap();
-        match check_credentials(s, &messages, &m, &server, &name, &irc_channel){
+        match check_credentials(s, &messages, &m, &server, &name, &irc_channel) {
             Ok(()) => (),
             Err(e) => {
                 s.pop_layer();
                 let error_layout = LinearLayout::vertical()
-                    .child(TextView::new(format!("Error: {:?}. Channel must begin with '#'.", e)))
+                    .child(TextView::new(format!(
+                        "Error: {:?}. Channel must begin with '#'.",
+                        e
+                    )))
                     .child(Button::new("Quit", move |s| {
                         s.quit();
                     }));
