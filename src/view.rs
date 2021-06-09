@@ -118,8 +118,8 @@ pub fn open_chat(
 
     let chat_input = EditView::new().with_name("chat").min_width(80);
 
-    let header = TextContent::new(format!("Connected to {}.\nType '#channel_name 
-                                          [message]' to send a message to the channel.\nType 'username 
+    let header = TextContent::new(format!("Connected to {}.\nType '#channel_name \
+                                          [message]' to send a message to the channel.\nType 'username \
                                           [message]' to send a message to a user\n", channel));
 
     let chat_wrapper = LinearLayout::horizontal()
