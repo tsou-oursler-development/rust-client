@@ -10,6 +10,16 @@ use cursive::views::{
 };
 use cursive::{Cursive, CursiveRunnable};
 
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+enum TuiError {
+    #[error("No command supplied")]
+    ChannelError(),
+}
+
+type Result<T> = std::result::Result<T, TuiError>;
+
 fn check_credentials(
     s: &mut Cursive,
     messages: &TextContent,
@@ -17,8 +27,12 @@ fn check_credentials(
     server: &str,
     name: &str,
     irc_channel: &str,
-) {
+) -> Result<()> {
     s.pop_layer();
+    
+    if irc_channel.chars().nth(0).unwrap() != '#' {
+        return Err(TuiError::ChannelError());
+    }
 
     let m = mine.clone();
     m.send(Event::TuiCredentials(
@@ -30,6 +44,8 @@ fn check_credentials(
     let time = time::Duration::from_millis(1000);
     thread::sleep(time);
     open_chat(s, messages, m, name, irc_channel);
+    
+    Ok(())
 }
 
 /*
@@ -164,7 +180,19 @@ pub fn start_client(mine: mpsc::Sender<Event>) -> (CursiveRunnable, TextContent)
         let irc_channel = s
             .call_on_name("irc_channel", |view: &mut EditView| view.get_content())
             .unwrap();
-        check_credentials(s, &messages, &m, &server, &name, &irc_channel)
+        match check_credentials(s, &messages, &m, &server, &name, &irc_channel){
+            Ok(()) => (),
+            Err(e) => {
+                s.pop_layer();
+                let error_layout = LinearLayout::vertical()
+                    .child(TextView::new(format!("Error: {:?}. Channel must begin with '#'.", e)))
+                    .child(Button::new("Quit", move |s| {
+                        s.quit();
+                    }));
+
+                s.add_layer(error_layout);
+            }
+        };
     });
 
     let login_wrapper = OnEventView::new(
