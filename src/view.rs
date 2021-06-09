@@ -1,28 +1,39 @@
 use crate::*;
 
-use std::{sync::mpsc, time, thread};
+use std::{sync::mpsc, thread, time};
 
 use cursive::traits::*;
+use cursive::view::*;
 use cursive::views::{
-    Button, Dialog, DummyView, EditView, LinearLayout, OnEventView, Panel, ScrollView, TextContent,
-    TextView, BoxView, NamedView,
+    Button, Dialog, DummyView, EditView, LinearLayout, OnEventView, Panel, ResizedView,
+    TextContent, TextView,
 };
-use cursive::{Cursive, CursiveRunnable, Vec2};
+use cursive::{Cursive, CursiveRunnable};
 
-fn check_credentials(
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum TuiError {
+    #[error("No command supplied")]
+    ChannelError(),
+}
+
+pub type Result<T> = std::result::Result<T, TuiError>;
+
+pub fn check_credentials(
     s: &mut Cursive,
     messages: &TextContent,
     mine: &mpsc::Sender<Event>,
     server: &str,
     name: &str,
     irc_channel: &str,
-) {
+) -> Result<()> {
     s.pop_layer();
 
-    let messages_clone = messages.clone();
+    if irc_channel.chars().nth(0).unwrap() != '#' {
+        return Err(TuiError::ChannelError());
+    }
 
-    let layout = LinearLayout::vertical().child(TextView::new_with_content(messages_clone));
-    
     let m = mine.clone();
     m.send(Event::TuiCredentials(
         name.to_owned(),
@@ -33,6 +44,8 @@ fn check_credentials(
     let time = time::Duration::from_millis(1000);
     thread::sleep(time);
     open_chat(s, messages, m, name, irc_channel);
+
+    Ok(())
 }
 
 /*
@@ -86,55 +99,56 @@ pub fn open_chat(
     channel: &str,
 ) {
     let messages_clone = messages.clone();
-    let name1 = name.to_string().clone();
+    let name1 = name.to_string();
 
-    let chat_content =
-        ScrollView::new(LinearLayout::vertical().child(TextView::new_with_content(messages_clone)));
-    
     let chat_input = EditView::new().with_name("chat").min_width(80);
 
-    let header = TextContent::new("Connected to ".to_string() + channel);
+    let header = TextContent::new(format!("Connected to {}.\nType '#channel_name [message]' to send a message to the channel.\nType 'username [message]' to send a message to a user\n", channel));
 
     let chat_wrapper = LinearLayout::horizontal()
         .child(TextView::new("Chat:"))
         .child(chat_input);
 
-    let m1 = m.clone();
     let m2 = m.clone();
-    
+
     let send_button = Button::new("Send", move |s| {
-            //get message
-            let message = s
-                .call_on_name("chat", |view: &mut EditView| view.get_content())
-                .unwrap();
-            //clear input
-            let _ = s
-                .call_on_name("chat", |view: &mut EditView| view.set_content(""))
-                .unwrap();
-            //send message
-            m1.send(Event::TuiMessage(name1.to_string(), message.to_string()))
-                .unwrap();
-        });
+        let message = s
+            .call_on_name("chat", |view: &mut EditView| view.get_content())
+            .unwrap();
+        let _ = s
+            .call_on_name("chat", |view: &mut EditView| view.set_content(""))
+            .unwrap();
+        m.send(Event::TuiMessage(name1.clone(), message.to_string()))
+            .unwrap();
+    });
 
     let quit_button = Button::new("Quit", move |s| {
-            m2.send(Event::TuiQuit).unwrap();
-            s.quit()});
+        m2.send(Event::TuiQuit).unwrap();
+        s.quit()
+    });
 
     let button_row = LinearLayout::horizontal()
         .child(send_button)
         .child(DummyView.fixed_width(2))
         .child(quit_button);
 
+    let chat_layout = LinearLayout::vertical()
+        .child(TextView::new_with_content(messages_clone))
+        .child(chat_wrapper)
+        .scrollable()
+        .scroll_strategy(ScrollStrategy::StickToBottom);
+
     let layout = LinearLayout::vertical()
         .child(TextView::new_with_content(header))
         .child(DummyView.fixed_height(1))
-        .child(chat_content)
-        .child(chat_wrapper)
+        .child(chat_layout)
         .child(button_row);
 
-    let chat_window = BoxView::with_max_height(80, layout);
+    let chat_window = ResizedView::with_max_height(50, layout);
 
     s.add_layer(Dialog::around(Panel::new(chat_window)));
+
+    s.set_fps(1);
 }
 
 pub fn start_client(mine: mpsc::Sender<Event>) -> (CursiveRunnable, TextContent) {
@@ -166,7 +180,22 @@ pub fn start_client(mine: mpsc::Sender<Event>) -> (CursiveRunnable, TextContent)
         let irc_channel = s
             .call_on_name("irc_channel", |view: &mut EditView| view.get_content())
             .unwrap();
-        check_credentials(s, &messages, &m, &server, &name, &irc_channel)
+        match check_credentials(s, &messages, &m, &server, &name, &irc_channel) {
+            Ok(()) => (),
+            Err(e) => {
+                s.pop_layer();
+                let error_layout = LinearLayout::vertical()
+                    .child(TextView::new(format!(
+                        "Error: {:?}. Channel must begin with '#'.",
+                        e
+                    )))
+                    .child(Button::new("Quit", move |s| {
+                        s.quit();
+                    }));
+
+                s.add_layer(error_layout);
+            }
+        };
     });
 
     let login_wrapper = OnEventView::new(
@@ -177,23 +206,22 @@ pub fn start_client(mine: mpsc::Sender<Event>) -> (CursiveRunnable, TextContent)
             .child(irc_channel_input),
     );
 
-    let m = mine.clone();
     let button_row = LinearLayout::horizontal()
         .child(login_button)
         .child(DummyView.fixed_width(2))
         .child(Button::new("Quit", move |s| {
-            m.send(Event::TuiQuit).unwrap();
+            mine.send(Event::TuiQuit).unwrap();
             s.quit();
         }));
 
     let layout = Dialog::around(
-            LinearLayout::vertical()
-                .child(DummyView.fixed_height(1))
-                .child(login_wrapper)
-                .child(DummyView.fixed_height(1))
-                .child(button_row),
-        )
-        .title("Login");
+        LinearLayout::vertical()
+            .child(DummyView.fixed_height(1))
+            .child(login_wrapper)
+            .child(DummyView.fixed_height(1))
+            .child(button_row),
+    )
+    .title("Login");
 
     siv.add_layer(layout);
 

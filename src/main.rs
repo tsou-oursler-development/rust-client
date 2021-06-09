@@ -34,7 +34,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let send_message = format!("/PRIVMESSAGE {}", &message);
                     messages.append(format!("{}: {}\n", &name, &message));
                     controller::send(&ctlr, &send_message).unwrap();
-                    // controller::send(&ctlr, &message).unwrap();
                 }
                 Event::TuiQuit => {
                     controller::send(&ctlr, "/Quit").unwrap();
