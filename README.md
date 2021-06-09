@@ -3,11 +3,11 @@
 <hr>
 Rust IRC Client is a text-based user interface client that allows users to communicate with each other over a network via the IRC protocol. It was written entirely in 
 Rust and uses the <a href="https://github.com/gyscos/cursive">cursive</a> and <a href="https://github.com/aatxe/irc">irc</a> crates.<br>
-Users running this client are prompted to enter a server, channel, and name. If the server and channel exist, then NAME will connect the user
+Users running this client are prompted to enter a server, channel, and name. If the server and channel exist, then Rust IRC Client will connect the user
 to the channel with their chosen nickname. <br>
 All messages submitted to the tui by a user are sent through a channel by a std::sync::mpsc::Sender. The main thread receives the messages with a 
 std::sync::mpsc::Receiver and appends them to the chat window on the tui. The main thread also sends the messages to the controller, which uses the
-IRC API to send the messages to the server. Messages are received from the server by the controller, which uses the same Sender as the tui to send the 
+IRC RFC to send the messages to the server. Messages are received from the server by the controller, which uses the same Sender as the tui to send the 
 messages through the channel to main, which then appends them to the chat window.
 <hr>
 <h2> How to Build and Run </h2>
