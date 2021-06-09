@@ -22,7 +22,6 @@ pub async fn create_client(
     use_tls: bool,
     channel: &str,
 ) -> Client {
-    //eprintln!("connect::create_client() called");
     let s = |s: &str| Some(s.to_owned());
 
     let config = Config {
@@ -34,18 +33,12 @@ pub async fn create_client(
         ..Config::default()
     };
 
-    //let temp_config = config.clone();
-    //eprintln!("{:?}", temp_config);
-
-    //eprintln!("before from_config()");
     let client = tokio::task::block_in_place(|| Client::from_config(config));
-    //eprintln!("after from_config()");
 
     client.await.expect("create_client")
 }
 
 pub async fn start_receive(client: ClientHandle, my_channel: mpsc::Sender<Event>) {
-    //eprintln!("connect::run_stream() called");
     let mut stream = {
         let mut client_guard = client.lock().unwrap();
         let client_ref = client_guard.as_mut().unwrap();
@@ -54,42 +47,25 @@ pub async fn start_receive(client: ClientHandle, my_channel: mpsc::Sender<Event>
     };
     let m1 = my_channel.clone();
     while let Some(m) = stream.next().await.transpose().unwrap() {
-        //rcv messages from server and send them to tui to print to screen
-        //eprintln!("{:?}", m);
         let messager = m.to_string().clone();
         let _ = match m.command {
-            /* Command::Response(Response::RPL_MOTD, _) => {
-                m1.send(Event::IrcMotd(m.to_string())).unwrap()
-            }
-            Command::Response(Response::RPL_WELCOME, _) => {
-                m1.send(Event::IrcWelcome).unwrap()
-            }
-            Command::Response(Response::RPL_NONE, _) => {
-                m1.send(Event::IrcMessage(m.to_string())).unwrap()
-            },
-            _ => eprintln!("unknown message from IRC: {}", m.to_string()),*/
             Command::Response(_, _) => {
-               /* match m.source_nickname() {
-                    Some(_) => m1.send(Event::IrcMessage("from the server".to_string(), res.join(":"))).unwrap(),
-                    None => m1.send(Event::IrcMessage("".to_string(), res.join(" "))).unwrap(),
-            }; */
-               // let msg = m.to_string().replace(':', " ");
                 let mut msg: Vec<_> = messager.split(' ').collect();
-                m1.send(Event::IrcMessage(msg.remove(0).to_string().replace(':', " "), msg.join(" ").replace(':'," "))).unwrap();
+                m1.send(Event::IrcMessage(
+                    msg.remove(0).to_string().replace(':', " "),
+                    msg.join(" ").replace(':', " "),
+                ))
+                .unwrap();
             }
-            Command::PRIVMSG(ref target, ref msg) =>// {
-                //println!("hello");
-                /*match m.source_nickname() {
-                    Some(inner) => m1
-                        .send(Event::IrcMessage(inner.to_string(), m.to_string()))
-                        .unwrap(),
-                    None => m1
-                        .send(Event::IrcMessage("".to_string(), m.to_string()))
-                .unwrap(), */
-                m1.send(Event::IrcMessage(target.to_string(), msg.to_string())).unwrap(),
-               // };
-          // }
-            _ => m1.send(Event::IrcMessage("".to_string(), m.to_string())).unwrap(),
+            Command::PRIVMSG(ref target, ref msg) =>
+            // {
+            {
+                m1.send(Event::IrcMessage(target.to_string(), msg.to_string()))
+                    .unwrap()
+            }
+            _ => m1
+                .send(Event::IrcMessage("".to_string(), m.to_string()))
+                .unwrap(),
         };
     }
 }
