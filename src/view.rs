@@ -13,14 +13,14 @@ use cursive::{Cursive, CursiveRunnable};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-enum TuiError {
+pub enum TuiError {
     #[error("No command supplied")]
     ChannelError(),
 }
 
-type Result<T> = std::result::Result<T, TuiError>;
+pub type Result<T> = std::result::Result<T, TuiError>;
 
-fn check_credentials(
+pub fn check_credentials(
     s: &mut Cursive,
     messages: &TextContent,
     mine: &mpsc::Sender<Event>,
