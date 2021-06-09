@@ -13,7 +13,9 @@ messages through the channel to main, which then appends them to the chat window
 <h2> How to Build and Run </h2>
 After cloning this repository, use "cargo run" to open the client. <br>
 A window will appear asking for login credentials: a server and channel to connect to, and the name you wish to appear as your nickname. <br>
-![Image of login screen](https://user-images.githubusercontent.com/77073427/121328292-0e5eaf00-c8c9-11eb-9411-f2c44c37959d.PNG)
+<img src="https://user-images.githubusercontent.com/77073427/121328292-0e5eaf00-c8c9-11eb-9411-f2c44c37959d.PNG"
+     alt="Image of login screen"
+     style="float: left; margin-right: 10px;" />
 Once the credentials have been entered, if the server and channel are valid then a window will appear with a log from the server and a text editor for 
 entering new chat messages. <br>
 Users are able to send messages to either the entire channel, or to specific users. If no channel is specified, then the client will assume that the 
