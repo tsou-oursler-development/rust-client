@@ -26,7 +26,7 @@ For example, <br>
 will send a message to the channel 'test-channel'.<br>
 test-user hello <br>
 will send a message to the user 'test-user'.<br>
- <img src="![Chat](https://user-images.githubusercontent.com/77073427/121328804-8036f880-c8c9-11eb-85a3-ea622f93d4e8.PNG"    
+<img src="https://user-images.githubusercontent.com/77073427/121328804-8036f880-c8c9-11eb-85a3-ea622f93d4e8.PNG"    
      	alt="Image of login screen"
 	style="float: left; margin-right: 10px;" />
 The chat window is set to continue scrolling to the bottom as messages appear, however this feature is overriden when a user uses their cursor instead of their 
