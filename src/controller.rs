@@ -56,7 +56,7 @@ pub async fn start_receive(client: ClientHandle, my_channel: mpsc::Sender<Event>
     while let Some(m) = stream.next().await.transpose().unwrap() {
         //rcv messages from server and send them to tui to print to screen
         //eprintln!("{:?}", m);
-
+        let messager = m.to_string().clone();
         let _ = match m.command {
             /* Command::Response(Response::RPL_MOTD, _) => {
                 m1.send(Event::IrcMotd(m.to_string())).unwrap()
@@ -68,17 +68,28 @@ pub async fn start_receive(client: ClientHandle, my_channel: mpsc::Sender<Event>
                 m1.send(Event::IrcMessage(m.to_string())).unwrap()
             },
             _ => eprintln!("unknown message from IRC: {}", m.to_string()),*/
-            _ => {
+            Command::Response(_, _) => {
+               /* match m.source_nickname() {
+                    Some(_) => m1.send(Event::IrcMessage("from the server".to_string(), res.join(":"))).unwrap(),
+                    None => m1.send(Event::IrcMessage("".to_string(), res.join(" "))).unwrap(),
+            }; */
+               // let msg = m.to_string().replace(':', " ");
+                let mut msg: Vec<_> = messager.split(' ').collect();
+                m1.send(Event::IrcMessage(msg.remove(0).to_string().replace(':', " "), msg.join(" ").replace(':'," "))).unwrap();
+            }
+            Command::PRIVMSG(ref target, ref msg) =>// {
                 //println!("hello");
-                match m.source_nickname() {
+                /*match m.source_nickname() {
                     Some(inner) => m1
                         .send(Event::IrcMessage(inner.to_string(), m.to_string()))
                         .unwrap(),
                     None => m1
                         .send(Event::IrcMessage("".to_string(), m.to_string()))
-                        .unwrap(),
-                };
-            }
+                .unwrap(), */
+                m1.send(Event::IrcMessage(target.to_string(), msg.to_string())).unwrap(),
+               // };
+          // }
+            _ => m1.send(Event::IrcMessage("".to_string(), m.to_string())).unwrap(),
         };
     }
 }
@@ -102,7 +113,7 @@ pub fn send(client: &ClientHandle, message: &str) -> GenericResult<()> {
         ""
     };
     let res = match v[0] {
-        "/PRIVMESSAGE" => client.send_privmsg(chan, v.drain(1..).collect::<Vec<_>>().concat())?,
+        "/PRIVMESSAGE" => client.send_privmsg(chan, v.drain(1..).collect::<Vec<_>>().join(" "))?,
         "/JOIN" => {
             if v.len() == 1 {
                 client.send_join(chan)?
