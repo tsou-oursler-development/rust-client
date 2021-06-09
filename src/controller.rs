@@ -96,7 +96,13 @@ pub fn send(client: &ClientHandle, message: &str) -> GenericResult<()> {
         ""
     };
     let res = match v[0] {
-        "/PRIVMESSAGE" => client.send_privmsg(chan, v.drain(1..).collect::<Vec<_>>().join(" "))?,
+        "/PRIVMESSAGE" => {
+            if !chan.contains('#') {
+                client.send_privmsg(v.remove(1), v.drain(1..).collect::<Vec<_>>().join(" "))?
+            } else {
+                client.send_privmsg(chan, v.drain(1..).collect::<Vec<_>>().join(" "))?
+            }
+        }
         "/JOIN" => {
             if v.len() == 1 {
                 client.send_join(chan)?
