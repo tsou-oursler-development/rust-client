@@ -37,7 +37,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     // controller::send(&ctlr, &message).unwrap();
                 }
                 Event::TuiQuit => {
-                    // TODO: shut down client and tui.
+                    controller::send(&ctlr, "/Quit").unwrap();
+                    //TODO close tui
                     break;
                 }
                 Event::TuiCredentials(name, channel, server) => {
