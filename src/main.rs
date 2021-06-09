@@ -28,13 +28,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let message = con_rcv.recv().expect("receive channel closed");
             match message {
                 Event::IrcMessage(name, message) => {
-                    messages.append(format!("{}: {}\n", &name, &message));
+                    let uppercase_name = name.to_uppercase();
+                    messages.append(format!("{}: {}\n", &uppercase_name, &message));
                 }
                 Event::TuiMessage(name, message) => {
                     let send_message = format!("/PRIVMESSAGE {}", &message);
-                    messages.append(format!("{}: {}\n", &name, &message));
+                    let uppercase_name = name.to_uppercase();
+                    messages.append(format!("{}: {}\n", uppercase_name, &message));
                     controller::send(&ctlr, &send_message).unwrap();
-                    // controller::send(&ctlr, &message).unwrap();
                 }
                 Event::TuiQuit => {
                     // TODO: shut down client and tui.
