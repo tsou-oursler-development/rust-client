@@ -1,6 +1,5 @@
-use crate::*;
+use::view::*;
 
-//use cursive::Cursive;
 use cursive::views::TextContent;
 use std::sync::mpsc;
 
