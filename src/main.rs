@@ -36,6 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     controller::send(&ctlr, &send_message).unwrap();
                 }
                 Event::TuiQuit => {
+                    messages.append("Quitting");
                     controller::send(&ctlr, "/Quit").unwrap();
                     //TODO close tui
                     break;
@@ -66,5 +67,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tui.run();
     main_thread.join().unwrap();
+    tui.quit();
     Ok(())
 }

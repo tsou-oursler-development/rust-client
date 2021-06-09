@@ -30,7 +30,7 @@ pub fn check_credentials(
 ) -> Result<()> {
     s.pop_layer();
 
-    if irc_channel.chars().nth(0).unwrap() != '#' {
+    if !irc_channel.starts_with('#') {
         return Err(TuiError::ChannelError());
     }
 
@@ -118,8 +118,22 @@ pub fn open_chat(
         let _ = s
             .call_on_name("chat", |view: &mut EditView| view.set_content(""))
             .unwrap();
-        m.send(Event::TuiMessage(name1.clone(), message.to_string()))
-            .unwrap();
+        let words: Vec<String> = message.split(' ').map(|s| s.to_string()).collect();
+        if words.len() == 1 {
+            let upper_word = words[0].to_uppercase();
+            match upper_word.as_str() {
+                "QUIT" => {
+                    m.send(Event::TuiQuit).unwrap();
+                }
+                _ => {
+                    m.send(Event::TuiMessage(name1.clone(), message.to_string()))
+                        .unwrap();
+                }
+            };
+        } else {
+            m.send(Event::TuiMessage(name1.clone(), message.to_string()))
+                .unwrap();
+        }
     });
 
     let quit_button = Button::new("Quit", move |s| {
