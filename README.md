@@ -49,4 +49,4 @@ Future goals for this project would be to work on more message parsing to allow 
 We would also like to add a drop-down menu of existing channels for a user to connect to and some sort of warning if the user has selected an invalid server in the login process.<br>
 <hr>
 <h2> License </h2>
-LICENSE LINK.
+This project is licensed under the GNU General Public License, available <a href="https://github.com/tsou-oursler-development/rust-client/blob/main/LICENSE.md">here</a>.
