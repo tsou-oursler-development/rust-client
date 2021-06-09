@@ -82,7 +82,7 @@ pub fn send(client: &ClientHandle, message: &str) -> GenericResult<()> {
     let client = client.as_mut().unwrap();
     let mut v: Vec<_> = message.split(' ').collect();
     let chan = if v.len() > 1 {
-        if v[1].starts_with("#") {
+        if v[1].starts_with('#') {
             let check = v.remove(1);
             if check.is_channel_name() {
                 check
