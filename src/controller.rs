@@ -68,17 +68,19 @@ pub async fn start_receive(client: ClientHandle, my_channel: mpsc::Sender<Event>
                 m1.send(Event::IrcMessage(m.to_string())).unwrap()
             },
             _ => eprintln!("unknown message from IRC: {}", m.to_string()),*/
-            _ => {
+            Command::PRIVMSG(ref target, ref msg) =>// {
                 //println!("hello");
-                match m.source_nickname() {
+                /*match m.source_nickname() {
                     Some(inner) => m1
                         .send(Event::IrcMessage(inner.to_string(), m.to_string()))
                         .unwrap(),
                     None => m1
                         .send(Event::IrcMessage("".to_string(), m.to_string()))
-                        .unwrap(),
-                };
-            }
+                .unwrap(), */
+                m1.send(Event::IrcMessage(target.to_string(), msg.to_string())).unwrap(),
+               // };
+          // }
+            _ => m1.send(Event::IrcMessage("".to_string(), m.to_string())).unwrap(),
         };
     }
 }
