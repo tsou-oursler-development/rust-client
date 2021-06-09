@@ -86,7 +86,10 @@ pub async fn start_receive(client: ClientHandle, my_channel: mpsc::Sender<Event>
                     None => m1
                         .send(Event::IrcMessage("".to_string(), m.to_string()))
                 .unwrap(), */
-                m1.send(Event::IrcMessage(target.to_string(), msg.to_string())).unwrap(),
+                match m.source_nickname(){
+                    Some(inner) => m1.send(Event::IrcMessage(inner.to_string(), msg.to_string())).unwrap(),
+                    None => m1.send(Event::IrcMessage(target.to_string(), msg.to_string())).unwrap(),
+                }
                // };
           // }
             _ => m1.send(Event::IrcMessage("".to_string(), m.to_string())).unwrap(),
