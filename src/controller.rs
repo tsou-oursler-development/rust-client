@@ -51,11 +51,21 @@ pub async fn start_receive(client: ClientHandle, my_channel: mpsc::Sender<Event>
         let _ = match m.command {
             Command::Response(_, _) => {
                 let mut msg: Vec<_> = messager.split(' ').collect();
-                m1.send(Event::IrcMessage(msg.remove(0).to_string().replace(':', " "), msg.join(" ").replace(':'," "))).unwrap();
+                m1.send(Event::IrcMessage(
+                    msg.remove(0).to_string().replace(':', " "),
+                    msg.join(" ").replace(':', " "),
+                ))
+                .unwrap();
             }
-            Command::PRIVMSG(ref target, ref msg) =>// {
-                m1.send(Event::IrcMessage(target.to_string(), msg.to_string())).unwrap(),
-            _ => m1.send(Event::IrcMessage("".to_string(), m.to_string())).unwrap(),
+            Command::PRIVMSG(ref target, ref msg) =>
+            // {
+            {
+                m1.send(Event::IrcMessage(target.to_string(), msg.to_string()))
+                    .unwrap()
+            }
+            _ => m1
+                .send(Event::IrcMessage("".to_string(), m.to_string()))
+                .unwrap(),
         };
     }
 }

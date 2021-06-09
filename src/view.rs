@@ -1,7 +1,7 @@
+//! IRC client text-based user interface. Provides the user with a textual display of all
+//! incoming and outgoing IRC messages and commands.
+
 use crate::*;
-
-use std::{sync::mpsc, thread, time};
-
 use cursive::traits::*;
 use cursive::view::*;
 use cursive::views::{
@@ -9,17 +9,25 @@ use cursive::views::{
     TextContent, TextView,
 };
 use cursive::{Cursive, CursiveRunnable};
-
+use std::{sync::mpsc, thread, time};
 use thiserror::Error;
 
+/// Tui input error.
 #[derive(Error, Debug)]
 pub enum TuiError {
     #[error("No command supplied")]
     ChannelError(),
 }
 
+/// Result type for Tui errors.
 pub type Result<T> = std::result::Result<T, TuiError>;
 
+/// Check that user has correctly formatted the channel name.
+/// Send credentials through a channel to be verified.
+///
+/// # Errors
+///
+/// * `TuiError::ChannelError` if `irc_channel` does not begin with `#`.
 pub fn check_credentials(
     s: &mut Cursive,
     messages: &TextContent,
@@ -91,6 +99,13 @@ fn select_channel(s: &mut Cursive, messages: &TextContent, mine: mpsc::Sender<Ev
 }
 */
 
+/// Open a chat window and a text editor.
+/// All incoming and outgoing messages are displayed in the window,
+/// and a user can type their messages into the text editor.
+/// Messages written to the tui are sent through a channel to be
+/// received by the main thread and the irc protocol API.
+/// The main thread appends the messages onto the tui window
+/// `chat_window` created by open_chat.
 pub fn open_chat(
     s: &mut Cursive,
     messages: &TextContent,
@@ -103,7 +118,9 @@ pub fn open_chat(
 
     let chat_input = EditView::new().with_name("chat").min_width(80);
 
-    let header = TextContent::new(format!("Connected to {}.\nType '#channel_name [message]' to send a message to the channel.\nType 'username [message]' to send a message to a user\n", channel));
+    let header = TextContent::new(format!("Connected to {}.\nType '#channel_name 
+                                          [message]' to send a message to the channel.\nType 'username 
+                                          [message]' to send a message to a user\n", channel));
 
     let chat_wrapper = LinearLayout::horizontal()
         .child(TextView::new("Chat:"))
@@ -165,6 +182,10 @@ pub fn open_chat(
     s.set_fps(1);
 }
 
+/// Start the irc client.
+/// Prompt a user to enter a server, name, and channel.
+/// Display an error dialog box if the user does does enter a proper
+/// channel name.
 pub fn start_client(mine: mpsc::Sender<Event>) -> (CursiveRunnable, TextContent) {
     let mut siv = cursive::default();
 
