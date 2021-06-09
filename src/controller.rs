@@ -65,9 +65,14 @@ pub async fn start_receive(client: ClientHandle, my_channel: mpsc::Sender<Event>
                     .send(Event::IrcMessage(target.to_string(), msg.to_string()))
                     .unwrap(),
             },
-            _ => m1
-                .send(Event::IrcMessage("".to_string(), m.to_string()))
-                .unwrap(),
+            _ => match m.response_target() {
+                Some(inner) => m1
+                    .send(Event::IrcMessage(inner.to_string(), messager.to_string()))
+                    .unwrap(),
+                None => m1
+                    .send(Event::IrcMessage("unk".to_string(), messager.to_string()))
+                    .unwrap(),
+            },
         };
     }
 }
@@ -77,7 +82,7 @@ pub fn send(client: &ClientHandle, message: &str) -> GenericResult<()> {
     let client = client.as_mut().unwrap();
     let mut v: Vec<_> = message.split(' ').collect();
     let chan = if v.len() > 1 {
-        if v[1].starts_with("#") {
+        if v[1].starts_with('#') {
             let check = v.remove(1);
             if check.is_channel_name() {
                 check
@@ -91,7 +96,13 @@ pub fn send(client: &ClientHandle, message: &str) -> GenericResult<()> {
         ""
     };
     let res = match v[0] {
-        "/PRIVMESSAGE" => client.send_privmsg(chan, v.drain(1..).collect::<Vec<_>>().join(" "))?,
+        "/PRIVMESSAGE" => {
+            if !chan.contains('#') {
+                client.send_privmsg(v.remove(1), v.drain(1..).collect::<Vec<_>>().join(" "))?
+            } else {
+                client.send_privmsg(chan, v.drain(1..).collect::<Vec<_>>().join(" "))?
+            }
+        }
         "/JOIN" => {
             if v.len() == 1 {
                 client.send_join(chan)?
