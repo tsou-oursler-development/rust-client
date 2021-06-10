@@ -1,3 +1,5 @@
+//! IRC client main application driver.
+
 mod controller;
 mod view;
 
@@ -5,6 +7,10 @@ use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
+/// Enum for incoming and outgoing IRC messages. Messages from tui are `Tui*`
+/// and messages from Irc are `Irc*`.
+///
+///#Unimplemented: `IrcMotd` and `IrcWelcome` are not yet implemented.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
     TuiMessage(String, String),
@@ -15,6 +21,20 @@ pub enum Event {
     IrcMessage(String, String),
 }
 
+/// Main application driver. Initialize an mpsc::channel to receive messages
+/// from `controller` and `tui`. `tui` and `controller` receive an mpsc::Sender
+/// for sending to main.
+///
+/// Start the tui. Create a main thread to loop for the life of the program
+/// overincoming messages from mpsc::channel.
+///
+/// Main listens for Event enums and then dispatches the appropriate code to
+/// complete actions.
+///
+/// `controller::create_client` and `controller::start_receive` are asynchronous
+/// functions, therefore they are called within a tokio runtime environment on
+/// their own anonymous thread. `tui` functions run synchronously while some
+/// `controller` functions run asynchronously.
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (con_send, con_rcv) = mpsc::channel();
     let (mut tui, messages) = view::start_client(con_send.clone());
