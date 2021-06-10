@@ -22,10 +22,10 @@ Users are able to send messages to either the entire channel, or to specific use
 user is attempting to send a message to a user, and will take the first word of their message to be the recipient's nickname. A channel is specified by
 using the '#' symbol.<br>
 For example, <br>
-**To send a message to a channel:** <br>
+To send a message to a channel: <br>
 #example-channel hello <br>
 will send a message to the channel 'test-channel'.<br>
-**To send a message to a user:**<br>
+To send a message to a user:<br>
 example-user hello or @example-user hello <br>
 will send a message to the user 'test-user'.<br>
 <img src="https://user-images.githubusercontent.com/77073427/121330433-e07a6a00-c8ca-11eb-952f-291ad0d4e7a1.PNG"    
