@@ -1,5 +1,5 @@
-//! IRC client text-based user interface. Provides the user with a textual display of all
-//! incoming and outgoing IRC messages and commands.
+//! IRC client text-based user interface. Provides the user with a textual display of a login menu
+//! and all incoming and outgoing IRC messages and commands.
 
 use crate::*;
 use cursive::traits::*;
@@ -12,26 +12,43 @@ use cursive::{Cursive, CursiveRunnable};
 use std::{sync::mpsc, thread, time};
 use thiserror::Error;
 
-/// Tui input error.
+/// TUI input error.
 #[derive(Error, Debug)]
 pub enum TuiError {
     #[error("No command supplied")]
     ChannelError(),
 }
 
-/// Result type for Tui errors.
+/// Result type for TUI errors.
 pub type Result<T> = std::result::Result<T, TuiError>;
 
 /// Check that user has correctly formatted the channel name.
 /// Send credentials through a channel to be verified.
+///
+///
+/// # Arguments:
+///
+/// * `s`: A cursive object for running the client.
+/// * `message_display`: A TextContent view to display irc messages.
+/// * `event_sender`: an mpsc::Sender that sends tui events to the thread running the tui.
+/// * `sever`: An &str with the name of the server to connect to.
+/// * `name`: An &str of the user's nickname.
+/// * `irc_channel`: An &str with the name of the channel to connect to.
+///
+///
+/// # Return value:
+///
+/// * Result<(), TuiError>, returns TuiError::ChannelError() if the channel does not being with
+/// `#`.
+///
 ///
 /// # Errors
 ///
 /// * `TuiError::ChannelError` if `irc_channel` does not begin with `#`.
 pub fn check_credentials(
     s: &mut Cursive,
-    messages: &TextContent,
-    mine: &mpsc::Sender<Event>,
+    message_display: &TextContent,
+    event_sender: &mpsc::Sender<Event>,
     server: &str,
     name: &str,
     irc_channel: &str,
@@ -42,62 +59,22 @@ pub fn check_credentials(
         return Err(TuiError::ChannelError());
     }
 
-    let m = mine.clone();
-    m.send(Event::TuiCredentials(
-        name.to_owned(),
-        irc_channel.to_owned(),
-        server.to_owned(),
-    ))
-    .unwrap();
+    let sender_clone = event_sender.clone();
+    sender_clone
+        .send(Event::TuiCredentials(
+            name.to_owned(),
+            irc_channel.to_owned(),
+            server.to_owned(),
+        ))
+        .unwrap();
+
     let time = time::Duration::from_millis(1000);
     thread::sleep(time);
-    open_chat(s, messages, m, name, irc_channel);
+
+    open_chat(s, message_display, sender_clone, name, irc_channel);
 
     Ok(())
 }
-
-/*
-fn select_channel(s: &mut Cursive, messages: &TextContent, mine: mpsc::Sender<Event>, name: &str) {
-    s.pop_layer();
-    let name1 = name.to_string().clone();
-
-    let channels = vec![
-        "#Channel 1",
-        "Channel 2",
-        "Channel 3",
-        "Channel 4",
-        "Channel 5",
-    ];
-
-    let channel_selection: Arc<Mutex<Option<usize>>> = Arc::new(Mutex::new(None));
-    let cs = Arc::clone(&channel_selection);
-
-    let mut channel_menu = SelectView::new().on_submit(move |_, &item| {
-        *cs.lock().unwrap() = Some(item);
-    });
-    for i in 0..channels.len() {
-        channel_menu.add_item(channels[i], i);
-    }
-
-    let messages_clone = messages.clone();
-
-    let connect_button = Button::new("Connect", move |s| {
-        let channel = *channel_selection.lock().unwrap();
-        open_chat(s, &messages_clone, mine, &name1, &channels[channel.unwrap()])
-    });
-
-    let button_row = LinearLayout::horizontal()
-        .child(connect_button)
-        .child(DummyView.fixed_width(2))
-        .child(Button::new("Quit", |s| s.quit()));
-
-    let layout = LinearLayout::vertical()
-        .child(channel_menu)
-        .child(button_row);
-
-    s.add_layer(Dialog::around(layout).title("Select Channel"));
-}
-*/
 
 /// Open a chat window and a text editor.
 /// All incoming and outgoing messages are displayed in the window,
@@ -106,28 +83,35 @@ fn select_channel(s: &mut Cursive, messages: &TextContent, mine: mpsc::Sender<Ev
 /// received by the main thread and the irc protocol API.
 /// The main thread appends the messages onto the tui window
 /// `chat_window` created by open_chat.
+///
+///
+/// # Arguments:
+///
+/// * `s`: A cursive object for running the client.
+/// * `message_display`: A TextContent view to display irc messages.
+/// * `event_sender`: an mpsc::Sender that sends tui events to the thread running the tui.
+/// * `name`: An &str of the user's nickname.
+/// * `irc_channel`: An &str with the name of the channel to connect to.
 pub fn open_chat(
     s: &mut Cursive,
-    messages: &TextContent,
-    m: mpsc::Sender<Event>,
+    message_display: &TextContent,
+    event_sender: mpsc::Sender<Event>,
     name: &str,
-    channel: &str,
+    irc_channel: &str,
 ) {
-    let messages_clone = messages.clone();
-    let name1 = name.to_string();
+    let message_clone = message_display.clone();
+    let name_clone = name.to_string();
+
+    let header = TextContent::new(format!("Connected to {}.\n\nType '#channel_name \
+                                          [message]' to send a message to the channel.\nType 'username \
+                                          [message]' or '@username [message]' to send a message to a user\n", irc_channel));
 
     let chat_input = EditView::new().with_name("chat").min_width(80);
-
-    let header = TextContent::new(format!("Connected to {}.\nType '#channel_name \
-                                          [message]' to send a message to the channel.\nType 'username \
-                                          [message]' to send a message to a user\n", channel));
-
-    let chat_wrapper = LinearLayout::horizontal()
+    let chat_input_wrapper = LinearLayout::horizontal()
         .child(TextView::new("Chat:"))
         .child(chat_input);
 
-    let m2 = m.clone();
-
+    let sender_clone = event_sender.clone();
     let send_button = Button::new("Send", move |s| {
         let message = s
             .call_on_name("chat", |view: &mut EditView| view.get_content())
@@ -140,21 +124,23 @@ pub fn open_chat(
             let upper_word = words[0].to_uppercase();
             match upper_word.as_str() {
                 "QUIT" => {
-                    m.send(Event::TuiQuit).unwrap();
+                    event_sender.send(Event::TuiQuit).unwrap();
                 }
                 _ => {
-                    m.send(Event::TuiMessage(name1.clone(), message.to_string()))
+                    event_sender
+                        .send(Event::TuiMessage(name_clone.clone(), message.to_string()))
                         .unwrap();
                 }
             };
         } else {
-            m.send(Event::TuiMessage(name1.clone(), message.to_string()))
+            event_sender
+                .send(Event::TuiMessage(name_clone.clone(), message.to_string()))
                 .unwrap();
         }
     });
 
     let quit_button = Button::new("Quit", move |s| {
-        m2.send(Event::TuiQuit).unwrap();
+        sender_clone.send(Event::TuiQuit).unwrap();
         s.quit()
     });
 
@@ -164,18 +150,18 @@ pub fn open_chat(
         .child(quit_button);
 
     let chat_layout = LinearLayout::vertical()
-        .child(TextView::new_with_content(messages_clone))
-        .child(chat_wrapper)
+        .child(TextView::new_with_content(message_clone))
+        .child(chat_input_wrapper)
         .scrollable()
         .scroll_strategy(ScrollStrategy::StickToBottom);
 
-    let layout = LinearLayout::vertical()
+    let window_layout = LinearLayout::vertical()
         .child(TextView::new_with_content(header))
         .child(DummyView.fixed_height(1))
         .child(chat_layout)
         .child(button_row);
 
-    let chat_window = ResizedView::with_max_height(50, layout);
+    let chat_window = ResizedView::with_max_height(50, window_layout);
 
     s.add_layer(Dialog::around(Panel::new(chat_window)));
 
@@ -186,11 +172,22 @@ pub fn open_chat(
 /// Prompt a user to enter a server, name, and channel.
 /// Display an error dialog box if the user does does enter a proper
 /// channel name.
-pub fn start_client(mine: mpsc::Sender<Event>) -> (CursiveRunnable, TextContent) {
+///
+///
+/// # Arguments:
+///
+/// * `event_sender`: an mpsc::Sender that sends tui events to the thread running the tui.
+///
+///
+/// # Return values:
+///
+/// * A CursiveRunnable object to start the tui.
+/// * A TextContent view to display irc messages.
+pub fn start_client(event_sender: mpsc::Sender<Event>) -> (CursiveRunnable, TextContent) {
     let mut siv = cursive::default();
 
-    let messages = TextContent::new("");
-    let messages_clone = messages.clone();
+    let message_display = TextContent::new("");
+    let message_clone = message_display.clone();
 
     let server_input = LinearLayout::horizontal()
         .child(TextView::new("Server:"))
@@ -204,7 +201,7 @@ pub fn start_client(mine: mpsc::Sender<Event>) -> (CursiveRunnable, TextContent)
         .child(TextView::new("Channel:"))
         .child(EditView::new().with_name("irc_channel").fixed_width(20));
 
-    let m = mine.clone();
+    let sender_clone = event_sender.clone();
     let login_button = Button::new("Login", move |s| {
         let server = s
             .call_on_name("server", |view: &mut EditView| view.get_content())
@@ -215,7 +212,14 @@ pub fn start_client(mine: mpsc::Sender<Event>) -> (CursiveRunnable, TextContent)
         let irc_channel = s
             .call_on_name("irc_channel", |view: &mut EditView| view.get_content())
             .unwrap();
-        match check_credentials(s, &messages, &m, &server, &name, &irc_channel) {
+        match check_credentials(
+            s,
+            &message_display,
+            &sender_clone,
+            &server,
+            &name,
+            &irc_channel,
+        ) {
             Ok(()) => (),
             Err(e) => {
                 s.pop_layer();
@@ -245,7 +249,7 @@ pub fn start_client(mine: mpsc::Sender<Event>) -> (CursiveRunnable, TextContent)
         .child(login_button)
         .child(DummyView.fixed_width(2))
         .child(Button::new("Quit", move |s| {
-            mine.send(Event::TuiQuit).unwrap();
+            event_sender.send(Event::TuiQuit).unwrap();
             s.quit();
         }));
 
@@ -262,5 +266,5 @@ pub fn start_client(mine: mpsc::Sender<Event>) -> (CursiveRunnable, TextContent)
 
     siv.add_global_callback('q', |s| s.quit());
 
-    (siv, messages_clone)
+    (siv, message_clone)
 }

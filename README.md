@@ -1,13 +1,13 @@
 # Rust IRC Client
 **Authors: Briana Oursler and Lily Tsou**
 <hr>
-NAME is a text-based user interface client that allows users to communicate with each other over a network via the IRC protocol. It was written entirely in 
-Rust and uses the [cursive](https://github.com/gyscos/cursive) and [irc](https://github.com/aatxe/irc) crates.<br>
-Users running this client are prompted to enter a server, channel, and name. If the server and channel exist, then NAME will connect the user
+Rust IRC Client is a text-based user interface client that allows users to communicate with each other over a network via the IRC protocol. It was written entirely in 
+Rust and uses the <a href="https://github.com/gyscos/cursive">cursive</a> and <a href="https://github.com/aatxe/irc">irc</a> crates.<br>
+Users running this client are prompted to enter a server, channel, and name. If the server and channel exist, then Rust IRC Client will connect the user
 to the channel with their chosen nickname. <br>
 All messages submitted to the tui by a user are sent through a channel by a std::sync::mpsc::Sender. The main thread receives the messages with a 
 std::sync::mpsc::Receiver and appends them to the chat window on the tui. The main thread also sends the messages to the controller, which uses the
-IRC API to send the messages to the server. Messages are received from the server by the controller, which uses the same Sender as the tui to send the 
+IRC RFC to send the messages to the server. Messages are received from the server by the controller, which uses the same Sender as the tui to send the 
 messages through the channel to main, which then appends them to the chat window.
 <hr>
 <h2> How to Build and Run </h2>
@@ -22,9 +22,11 @@ Users are able to send messages to either the entire channel, or to specific use
 user is attempting to send a message to a user, and will take the first word of their message to be the recipient's nickname. A channel is specified by
 using the '#' symbol.<br>
 For example, <br>
-#test-channel hello <br>
+To send a message to a channel: <br>
+#example-channel hello <br>
 will send a message to the channel 'test-channel'.<br>
-test-user hello <br>
+To send a message to a user:<br>
+example-user hello or @example-user hello <br>
 will send a message to the user 'test-user'.<br>
 <img src="https://user-images.githubusercontent.com/77073427/121330433-e07a6a00-c8ca-11eb-952f-291ad0d4e7a1.PNG"    
      	alt="Image of login screen"
@@ -45,7 +47,8 @@ Though this project is not completely free of bugs, we are still very pleased wi
 we feel as though we have accomplished quite a bit! We both learned a great deal about the crates we used, and though we needed help connecting the controller 
 and view, this was also a learning process which taught us a great deal about Rust channels. There have been large architectural rewrites and many lines of 
 abandoned code, but the final project is a working IRC client. <br>
-Future goals for this project would be to work on more message parsing to allow for extended user functionality and to work on the tui bugs mentioned above.
+Future goals for this project would be to work on more message parsing to allow for extended user functionality and to work on the tui bugs mentioned above.<br>
+We would also like to add a drop-down menu of existing channels for a user to connect to and some sort of warning if the user has selected an invalid server in the login process.<br>
 <hr>
 <h2> License </h2>
-LICENSE LINK.
+This project is licensed under the GNU General Public License, available <a href="https://github.com/tsou-oursler-development/rust-client/blob/main/LICENSE.md">here</a>.
