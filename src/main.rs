@@ -31,14 +31,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     messages.append(format!("{}: {}\n", &name, &message));
                 }
                 Event::TuiMessage(name, message) => {
-                    let send_message = format!("/PRIVMESSAGE {}", &message);
+                    let mut send_message = format!("/PRIVMESSAGE {}", &message);
                     messages.append(format!("{}: {}\n", &name, &message));
+
+                    if message.starts_with('@') {
+                        let without_symbol = &message[1..message.len()];
+                        send_message = format!("/PRIVMESSAGE {}", &without_symbol);
+                    }
+
                     controller::send(&ctlr, &send_message).unwrap();
                 }
                 Event::TuiQuit => {
                     messages.append("Quitting");
                     controller::send(&ctlr, "/Quit").unwrap();
-                    //TODO close tui
                     break;
                 }
                 Event::TuiCredentials(name, channel, server) => {
