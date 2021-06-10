@@ -1,4 +1,7 @@
-//! IRC client code to handle connection to IRC server through use of rust irc crate. Responsibilities include parsing and sending messages from the tui along to the server connection and receiving messags back from the server and parsing them for the tui.
+//! IRC client code to handle connection to IRC server through use of rust irc
+//! crate. Responsibilities include parsing and sending messages from the tui
+//! along to the server connection and receiving messags back from the server
+//! and parsing them for the tui.
 
 use crate::*;
 use futures::prelude::*;
@@ -22,7 +25,9 @@ type GenericError = Box<dyn std::error::Error + Send + Sync + 'static>;
 ///Result type either nothing or an error.
 type GenericResult<T> = Result<T, GenericError>;
 
-///Create client connection to IRC server. Receive credentials from main and establish a connection, then return the client. Async function so must be called in an asynchronous block.
+///Create client connection to IRC server. Receive credentials from main and
+/// establish a connection, then return the client. Async function so must be
+/// called in an asynchronous block.
 
 pub async fn create_client(
     nick: &str,
@@ -47,7 +52,13 @@ pub async fn create_client(
     client.await.expect("create_client")
 }
 
-///Initiate incoming stream from server. Once stream is running, create a loop that does not end until client connection to server is severed. The loop processes each message received from the server and formats it for its final printing on the tui. The name of the sender is separated from the irc message struct and sent as a string, along with the message body. When the sender is the server, the server name is specified. When sender is unknown, as for example occurs after quit is sent, 'unk' is printed.
+///Initiate incoming stream from server. Once stream is running, create a loop
+/// that does not end until client connection to server is severed. The loop
+/// processes each message received from the server and formats it for its final
+/// printing on the tui. The name of the sender is separated from the irc
+/// message struct and sent as a string, along with the message body. When the
+/// sender is the server, the server name is specified. When sender is unknown,
+/// as for example occurs after quit is sent, 'unk' is printed.
 
 pub async fn start_receive(client: ClientHandle, my_channel: mpsc::Sender<Event>) {
     let mut stream = {
@@ -88,7 +99,11 @@ pub async fn start_receive(client: ClientHandle, my_channel: mpsc::Sender<Event>
     }
 }
 
-///Parse outgoing messages. Determine the command as expressed by the end user and dispatch to the appropriate outgoing send function as provided by the rust irc library. Returns a GenericResult, which may be None or an error. The error may be thrown by the rust irc call to send or as an ArgError if unrecognized arguments are passed to `controller::send`.
+///Parse outgoing messages. Determine the command as expressed by the end user
+/// and dispatch to the appropriate outgoing send function as provided by the
+/// rust irc library. Returns a GenericResult, which may be None or an error.
+/// The error may be thrown by the rust irc call to send or as an ArgError if
+/// unrecognized arguments are passed to `controller::send`.
 ///
 /// # Errors
 ///
