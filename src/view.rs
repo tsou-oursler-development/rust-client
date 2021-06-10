@@ -60,16 +60,17 @@ pub fn check_credentials(
     }
 
     let sender_clone = event_sender.clone();
-    sender_clone.send(Event::TuiCredentials(
-        name.to_owned(),
-        irc_channel.to_owned(),
-        server.to_owned(),
-    ))
-    .unwrap();
-    
+    sender_clone
+        .send(Event::TuiCredentials(
+            name.to_owned(),
+            irc_channel.to_owned(),
+            server.to_owned(),
+        ))
+        .unwrap();
+
     let time = time::Duration::from_millis(1000);
     thread::sleep(time);
-    
+
     open_chat(s, message_display, sender_clone, name, irc_channel);
 
     Ok(())
@@ -126,12 +127,14 @@ pub fn open_chat(
                     event_sender.send(Event::TuiQuit).unwrap();
                 }
                 _ => {
-                    event_sender.send(Event::TuiMessage(name_clone.clone(), message.to_string()))
+                    event_sender
+                        .send(Event::TuiMessage(name_clone.clone(), message.to_string()))
                         .unwrap();
                 }
             };
         } else {
-            event_sender.send(Event::TuiMessage(name_clone.clone(), message.to_string()))
+            event_sender
+                .send(Event::TuiMessage(name_clone.clone(), message.to_string()))
                 .unwrap();
         }
     });
@@ -174,10 +177,10 @@ pub fn open_chat(
 /// # Arguments:
 ///
 /// * `event_sender`: an mpsc::Sender that sends tui events to the thread running the tui.
-/// 
+///
 ///
 /// # Return values:
-/// 
+///
 /// * A CursiveRunnable object to start the tui.
 /// * A TextContent view to display irc messages.
 pub fn start_client(event_sender: mpsc::Sender<Event>) -> (CursiveRunnable, TextContent) {
@@ -209,7 +212,14 @@ pub fn start_client(event_sender: mpsc::Sender<Event>) -> (CursiveRunnable, Text
         let irc_channel = s
             .call_on_name("irc_channel", |view: &mut EditView| view.get_content())
             .unwrap();
-        match check_credentials(s, &message_display, &sender_clone, &server, &name, &irc_channel) {
+        match check_credentials(
+            s,
+            &message_display,
+            &sender_clone,
+            &server,
+            &name,
+            &irc_channel,
+        ) {
             Ok(()) => (),
             Err(e) => {
                 s.pop_layer();

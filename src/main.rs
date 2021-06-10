@@ -23,63 +23,53 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let use_tls = false;
     let ctlr = Arc::new(Mutex::new(None));
 
-    let main_thread = thread::spawn(move || {
-        loop {
-            let message = con_rcv.recv().expect("receive channel closed");
-            match message {
-                Event::IrcMessage(name, message) => {
-                    messages.append(format!("{}: {}\n", &name, &message));
+    let main_thread = thread::spawn(move || loop {
+        let message = con_rcv.recv().expect("receive channel closed");
+        match message {
+            Event::IrcMessage(name, message) => {
+                messages.append(format!("{}: {}\n", &name, &message));
+            }
+            Event::TuiMessage(name, message) => {
+                let mut send_message = format!("/PRIVMESSAGE {}", &message);
+                messages.append(format!("{}: {}\n", &name, &message));
+
+                if message.starts_with('/') {
+                    send_message = message;
+                } else if message.starts_with('@') {
+                    let without_symbol = &message[1..message.len()];
+                    send_message = format!("/PRIVMESSAGE {}", &without_symbol);
                 }
-                Event::TuiMessage(name, message) => {
-                    let mut send_message = format!("/PRIVMESSAGE {}", &message);
-                    messages.append(format!("{}: {}\n", &name, &message));
 
-                    if message.starts_with('/'){
-                        send_message = message;
-                    }
+                controller::send(&ctlr, &send_message).unwrap();
 
-                    else if message.starts_with('@') {
-                        let without_symbol = &message[1..message.len()];
-                        send_message = format!("/PRIVMESSAGE {}", &without_symbol);
-                    }
-
-                    /*
-                    else {
-                        send_message = format!("/PRIVMESSAGE {}", &message);
-                    }
-                    */
-
-                    controller::send(&ctlr, &send_message).unwrap();
-                  
-                    if send_message == "/Quit" {
-                        break;
-                    }
-                }
-                Event::TuiQuit => {
-                    messages.append("Quitting");
-                    controller::send(&ctlr, "/Quit").unwrap();
+                if send_message == "/Quit" {
                     break;
                 }
-                Event::TuiCredentials(name, channel, server) => {
-                    let ctlr = Arc::clone(&ctlr);
-                    let event_channel = con_send.clone();
-                    messages.append(format!("{}: {}, {}\n", &name, &channel, &server));
-                    let _ = thread::spawn(move || {
-                        let rt = tokio::runtime::Runtime::new().unwrap();
-                        let client = rt.block_on(controller::create_client(
-                            &name, &server, port, use_tls, &channel,
-                        ));
-                        let mut rcvr = ctlr.lock().unwrap();
-                        *rcvr = Some(client);
-                        drop(rcvr);
-                        let join_channel = format!("/JOIN {}", &channel);
-                        controller::send(&ctlr, &join_channel).unwrap();
-                        rt.block_on(controller::start_receive(ctlr, event_channel))
-                    });
-                }
-                _ => {
-                    break;
-                }
+            }
+            Event::TuiQuit => {
+                messages.append("Quitting");
+                controller::send(&ctlr, "/Quit").unwrap();
+                break;
+            }
+            Event::TuiCredentials(name, channel, server) => {
+                let ctlr = Arc::clone(&ctlr);
+                let event_channel = con_send.clone();
+                messages.append(format!("{}: {}, {}\n", &name, &channel, &server));
+                let _ = thread::spawn(move || {
+                    let rt = tokio::runtime::Runtime::new().unwrap();
+                    let client = rt.block_on(controller::create_client(
+                        &name, &server, port, use_tls, &channel,
+                    ));
+                    let mut rcvr = ctlr.lock().unwrap();
+                    *rcvr = Some(client);
+                    drop(rcvr);
+                    let join_channel = format!("/JOIN {}", &channel);
+                    controller::send(&ctlr, &join_channel).unwrap();
+                    rt.block_on(controller::start_receive(ctlr, event_channel))
+                });
+            }
+            _ => {
+                break;
             }
         }
     });
