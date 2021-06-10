@@ -34,12 +34,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let mut send_message = format!("/PRIVMESSAGE {}", &message);
                     messages.append(format!("{}: {}\n", &name, &message));
 
-                    if message.starts_with('@') {
+                    if message.starts_with('/'){
+                        send_message = message;
+                    }
+
+                    else if message.starts_with('@') {
                         let without_symbol = &message[1..message.len()];
                         send_message = format!("/PRIVMESSAGE {}", &without_symbol);
                     }
 
+                    /*
+                    else {
+                        send_message = format!("/PRIVMESSAGE {}", &message);
+                    }
+                    */
+
                     controller::send(&ctlr, &send_message).unwrap();
+                  
+                    if send_message == "/Quit" {
+                        break;
+                    }
                 }
                 Event::TuiQuit => {
                     messages.append("Quitting");
