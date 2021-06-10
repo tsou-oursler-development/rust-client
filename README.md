@@ -24,10 +24,10 @@ using the '#' symbol.<br>
 For example, <br>
 To send a message to a channel: <br>
 #example-channel hello <br>
-will send a message to the channel 'test-channel'.<br>
+will send a message to the channel 'example-channel'.<br>
 To send a message to a user:<br>
 example-user hello or @example-user hello <br>
-will send a message to the user 'test-user'.<br>
+will send a message to the user 'example-user'.<br>
 <img src="https://user-images.githubusercontent.com/77073427/121330433-e07a6a00-c8ca-11eb-952f-291ad0d4e7a1.PNG"    
      	alt="Image of login screen"
 	style="float: left; margin-right: 10px;" />
