@@ -103,7 +103,7 @@ pub fn open_chat(
 
     let header = TextContent::new(format!("Connected to {}.\n\nType '#channel_name \
                                           [message]' to send a message to the channel.\nType 'username \
-                                          [message]' to send a message to a user\n", irc_channel));
+                                          [message]' or '@username [message]' to send a message to a user\n", irc_channel));
 
     let chat_input = EditView::new().with_name("chat").min_width(80);
     let chat_input_wrapper = LinearLayout::horizontal()
