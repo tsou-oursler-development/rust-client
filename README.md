@@ -28,6 +28,9 @@ will send a message to the channel 'example-channel'.<br>
 To send a message to a user:<br>
 example-user hello or @example-user hello <br>
 will send a message to the user 'example-user'.<br>
+To join a channel a user must type "/JOIN #channel_name" and to leave a channel they must type "/PART #channel_name". A user can also type "/Quit" to lot out of all channels.<br>
+<img src="https://user-images.githubusercontent.com/77073427/121463432-e02fac80-c966-11eb-8eea-e50a5b50b26d.PNG" align="left" />
+<img src="https://user-images.githubusercontent.com/77073427/121463433-e02fac80-c966-11eb-83a5-ce027c135a1b.PNG" align="left" />
 The chat window is set to continue scrolling to the bottom as messages appear, however this feature is overriden when a user uses their cursor instead of their 
 keyboard to send a message. In this case, the user must manually scroll to the bottom to see new messages.
 <br>
